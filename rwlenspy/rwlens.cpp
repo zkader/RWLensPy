@@ -11,15 +11,43 @@ std::complex<double> GetTransferFuncVal(
     for(int itheta = 2; itheta < theta_NM - 2; itheta++)
     {
         for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
-        {        	
+        {
 			if( IsStationary(itheta, jtheta, theta_NM, fermat_pot) )
 			{
 				std::complex<double> mag = GetMag(itheta, jtheta, theta_NM, theta_step, fermat_pot);
-				tfunc_val = tfunc_val + mag*std::exp(I*2.0*pi*freq*fermat_pot[jtheta + theta_NM * itheta] );				
+				//std::cout << "Stationary i,j: " << itheta << "," << jtheta << "| freq: " << freq <<"\n" ;
+				//std::cout << "Stationary mag: " << mag << "| freq: " << freq <<"\n" ;
+				//std::cout << "Stationary delay: " << fermat_pot[jtheta + theta_NM * itheta] << "| freq: " << freq <<"\n"  ;				
+				double phase = 2 * pi * freq * fermat_pot[jtheta + theta_NM * itheta] ;
+				tfunc_val = tfunc_val + mag*std::exp(I*phase);
+				//std::cout << "Stationary tfunc: " << tfunc_val << "| freq: " << freq  <<"\n" ;								
 			}
         }
     }		
     return tfunc_val;
+} 
+
+void GetFreqImage(
+	const int theta_NM,
+	const int freqind,
+	std::vector<double> &fermat_pot,
+    std::vector<imagepoint> &freq_images	
+	)
+{		
+    for(int itheta = 2; itheta < theta_NM - 2; itheta++)
+    {
+        for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
+        {        	
+			if( IsStationary(itheta, jtheta, theta_NM, fermat_pot) )
+			{
+				imagepoint stationary_image;
+				stationary_image.xind = itheta;
+				stationary_image.yind = jtheta;
+				stationary_image.find = freqind;
+				freq_images.push_back(stationary_image);
+			}
+        }
+    }
 } 
 
 bool IsStationary(const int itheta, const int jtheta, const int theta_NM, std::vector<double> &fermat_pot) 
@@ -32,25 +60,18 @@ bool IsStationary(const int itheta, const int jtheta, const int theta_NM, std::v
 
 	F_bx = F_cntr - fermat_pot[jtheta  + theta_NM * (itheta - 1)];		
 	F_by = F_cntr - fermat_pot[(jtheta - 1) + theta_NM * itheta];
-
-	if( (F_fx + F_bx == 0)&&(F_fy + F_by == 0) )
+    
+	if( ((Sign(F_fx) *  Sign(F_bx)  < 0) && (Sign(F_fy) * Sign(F_by) < 0)) || ( F_fx + F_bx + F_fy + F_by == 0) ) 
 	{
-	  return true;
-	}else
-	{
-		if(F_fx/F_bx < 0.0)
-		{
-			if(F_fy/F_by < 0.0)
-			{
-				return true;
-		}else{
-			return false;
-		}
+		//std::cout << "c Stationary 2: " << itheta << "," << jtheta <<"\n" ;
+		//std::cout << "c Stationary fx,fy,bx,by: " << F_fx  << "," << F_fy  << "," << F_fx  << "," << F_fy  << "," <<"\n" ;
+		//std::cout << "c Stationary fxs,fys : " << Fx_sign  << "," << Fy_sign <<"\n" ;						
+		return true;
 	}else
 	{
 		return false;
 	}	
-	}
+
 }
 
 std::complex<double> GetMag(const int itheta, const int jtheta, const int theta_NM, const double theta_step, std::vector<double> &fermat_pot)
@@ -87,11 +108,11 @@ void SetGeometricDelayArr(
 	
 	for(int arr_ii; arr_ii < theta_NM; arr_ii++)
 	{
-		const double theta_x = (theta_max - theta_min) / (theta_NM - 1) * arr_ii + theta_min;				
+		double theta_x = (theta_max - theta_min) / (theta_NM - 1) * arr_ii + theta_min;				
 		for(int arr_jj; arr_jj < theta_NM; arr_jj++)
 		{
-			const double theta_y = (theta_max - theta_min) / (theta_NM - 1) * arr_jj + theta_min;				
-			geom_arr[arr_ii] = 0.5*(pow( ( theta_x - beta_x ) ,2.0) + pow(theta_y - beta_y,2.0) );
+			double theta_y = (theta_max - theta_min) / (theta_NM - 1) * arr_jj + theta_min;				
+			geom_arr[arr_ii] = 0.5*( ( theta_x - beta_x ) * (theta_x - beta_x)  + (theta_y - beta_y) * (theta_y - beta_y) );
 		}
 	}
 }
@@ -111,3 +132,7 @@ void SetFermatPotential(
 		fermat_pot[arr_ii] = geom_factor*geom_arr[arr_ii] + lens_factor*lens_arr[arr_ii];
 	}
 } 
+
+int Sign(double val){
+	return (val > 0) - (val < 0);
+}

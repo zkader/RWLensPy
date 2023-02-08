@@ -10,12 +10,25 @@
 const double pi = 3.14159265358979323846;
 const std::complex<double> I (0,1.0);
 
+typedef struct imagepoint {
+	int xind;
+	int yind;
+	int find;
+} imagepoint;
+
 // 
 std::complex<double> GetTransferFuncVal(
 	const double theta_step,
 	const int theta_NM, 
 	double freq,                    // [Hz]
 	std::vector<double> &fermat_pot // [s]
+); 
+
+void GetFreqImage(
+	const int theta_NM,
+	const int freqind,             
+	std::vector<double> &fermat_pot, // [s]		
+    std::vector<imagepoint> &freq_images
 ); 
 
 std::complex<double> GetMag(
@@ -50,3 +63,4 @@ void SetFermatPotential(
 	std::vector<double> &fermat_pot 
 );
 
+int Sign(double val);

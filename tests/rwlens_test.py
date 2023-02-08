@@ -1,16 +1,15 @@
 import os
 import sys
 sys.path.insert(0,"/home/zkader/coderepo/RWLensPy/")
-sys.path.insert(0,"/home/zkader/coderepo/baseband-analysis/")
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm,SymLogNorm
 from time import time
-from scipy.fft import rfft,irfft,fft,ifft,fftfreq,fftshift
+from scipy.fft import rfft,irfft,fft,ifft,fftfreq,fftshift,rfftfreq
 
 import matplotlib as mpl
-from baseband_analysis.dev.lensing_sim import *
+from rwlenspy.baseband_sim import *
 
 GREYMAP = mpl.cm.__dict__["Greys"]
 
@@ -400,39 +399,85 @@ print(f'p scale : {p_scale} | theta inner: {theta_inner} | theta fres: {theta_fr
 print(f'p scale / theta fres: {p_scale/theta_fres0} | p scale /  theta p0: {p_scale /theta_p0}')
 
 theta_char = theta_p0
-max_fres = 1.5*theta_char
+max_fres = 3*theta_char
 theta_min = -max_fres.value
 theta_max = max_fres.value
 theta_N = 1001
-freq_min = 400E6
-freq_max = 800E6
-freq_N = 1025*100
+
+dump_frames = 1000
+freqs = 800e6 - rfftfreq(2048*dump_frames, d=1/800e6)
+freq_min = freqs[-1]
+freq_max = freqs[0]
+freq_N = freqs.size
 
 freq_ii = 400 * u.MHz
 freq_ii = freq_ii.to(u.Hz).value
 
 beta_x = 0.0
-beta_y = 0.0
+beta_y = 0.8*theta_char.value
 
 geom_const = ((1/(const_r2*c.c)).to(u.s)).value
 lens_const = ((r_e * c.c  /( 2 * np.pi)).to(u.cm**2/u.s) * ((1.0*u.pc/u.cm).to(u.m/u.m)).value).value # k_DM
 print(geom_const)
 print(lens_const)
+print(lens_const / (400e6**2))
 
 x1 = np.arange(theta_N)* (theta_max - theta_min ) / (theta_N - 1) + theta_min
-print(x1)
 #lens_arr = 0.7 * np.ones((theta_N*theta_N)) #np. np.exp(-0.5*()/p_scale.value )#np.random.normal(size=(theta_N*theta_N))
 
-lens_arr = 0.3 * np.exp(-0.5*( x1[:,None]**2 + x1[None,:]**2)/p_scale.value**2)
+posx = 0*theta_char.value
+posy = 0
+
+r = np.sqrt(x1[:,None]**2 + x1[None,:]**2)
+r0 = np.sqrt(posx**2 + posy**2)
+
+seed=np.random.randint(1,10000)
+print('seed: ',seed)
+#ne = get_plasma_Ne(eta1v,eta2v,de1,theta_inner,theta_outer,\
+#                   C2_n=1e-1,freq=freq0,D_eff=1/const_r2,seed=seed,plot=True)
+
+lens_arr = 0.03 * np.exp(-0.5*( (x1[:,None])**2 + (x1[None,:])**2)/p_scale.value**2)
+#lens_arr = 0.03 * np.exp(-0.5*((r-r0)**2)/p_scale.value**2)
+geom_arr = 0.5*( (x1[:,None]-beta_x)**2 + (x1[None,:] - beta_y)**2)
+
+#lens_arr = 1/lens_const * 4*
+#lens_arr = 50 *np.ones((theta_N,theta_N))
+#lens_arr = 1e-2*np.random.normal(loc=0,scale=1,size=(theta_N,theta_N))
+
+ferm = geom_const*geom_arr + lens_const/(400E6**2)*lens_arr
+ferm = ferm.astype(np.double)
 
 plt.figure()
-plt.imshow( geom_const*0.5*( x1[:,None]**2 + x1[None,:]**2) + lens_const*lens_arr,aspect='auto')
+#plt.imshow( ferm,aspect='auto')
+plt.pcolormesh(x1,x1,ferm)
 plt.colorbar()
 plt.savefig('ferm_full.png')
 
-lens_arr = lens_arr.ravel()
+ferm = ferm.ravel()
+
+#for i in range(2,theta_N-2):
+#    for j in range(2,theta_N-2):
+#        F_cntr = ferm[j + theta_N * i]
+#        F_fx = ferm[j  + theta_N * (i + 1)] - F_cntr
+#        F_fy = ferm[(j + 1) + theta_N * i] - F_cntr
+
+#        F_bx = F_cntr - ferm[j  + theta_N * (i - 1)]
+#        F_by = F_cntr - ferm[(j - 1) + theta_N * i]
+#        if (F_fx + F_bx == 0) * (F_fy + F_by == 0):
+#            print('stationary 1', i, j )            
+#        else:
+#            if (F_fx*F_bx < 0) * (F_fy*F_by < 0):
+#                print('stationary 2', i, j )                    
+#            else:
+#                continue            
+        
+lens_arr = lens_arr.astype(np.double).ravel()
+geom_arr = geom_arr.astype(np.double).ravel()
+
 t1 = time()
-transferfunc = rwl.RunPlasmaTransferFunc( lens_arr,
+transferfunc = rwl.RunPlasmaTransferFunc(
+                                       geom_arr,
+                                       lens_arr,
                                        theta_min,
                                        theta_max,
                                        theta_N,
@@ -444,10 +489,24 @@ transferfunc = rwl.RunPlasmaTransferFunc( lens_arr,
                                        geom_const,
                                        lens_const)
 
+#transferfunc = 0
+
+#rwl.GetFreqStationaryPoints( lens_arr,
+#                                       theta_min,
+#                                       theta_max,
+#                                       theta_N,
+#                                       beta_x,
+#                                       beta_y,
+#                                       freq_min,
+#                                       freq_max,
+#                                       freq_N,
+#                                       geom_const,
+#                                       lens_const)
+
 tv = time() - t1
 print('Total Time :',tv,'s',' | ',tv/60,'min',tv/3600,'hr')
 
-transferfunc = np.asarray(transferfunc)
+transferfunc = np.asarray(transferfunc)[::-1]
 print(transferfunc)
 impulse = fftshift(irfft(transferfunc))
 
@@ -457,11 +516,8 @@ sim = BasebandSim(W=dump_frames,diagnostic=False,upsample=1)
 sim.FRBSignal(2.56e-6*10,snr=snr_inj*(1*2048),polratio=0.66)
 sim.CreateVoltageStream(addnoise=False)
 vr = sim.v_stream[0,:].copy()
-sim.v_stream[0,:] = sim.v_stream[0,:] + np.random.normal(scale=0.1,size=vr.shape[0])
-sim.CreateWaterfall(plot=True,sig_freqs=[400e6,801e6],apply_rfimask=False,addnoise=False)
-
 vr = rfft(vr,axis=-1)
-vr = vr*transferfunc/np.sqrt(np.mean(np.abs(transferfunc)**2))    
+vr = vr*transferfunc.conj()/np.sqrt(np.mean(np.abs(transferfunc)**2))    
 vr = irfft(vr,axis=-1)
 
 sim.v_stream[0,:] = vr #+ np.random.normal(scale=0.1,size=vr.shape[0])
@@ -469,8 +525,10 @@ sim.v_stream[1,:] = vr #+ np.random.normal(scale=0.1,size=vr.shape[0])
 
 sim.CreateWaterfall(plot=True,sig_freqs=[400e6,801e6],apply_rfimask=False,addnoise=False)
 
-smfilt = get_smooth_matched_filter(sim.v_fall[:,:,:],10)
-plot_wfall(sim.v_fall,smfilt,10,plotloc='test_full_wfall.png')
+plt.figure()
+plt.imshow(np.mean(np.abs(sim.v_fall)**2,axis=1),aspect='auto',norm=LogNorm())
+plt.colorbar()
+plt.savefig('test_full_wfall.png')
 
 plt.figure()
 plt.plot(np.linspace(freq_min,freq_max,freq_N)/1e6,np.abs(transferfunc))
