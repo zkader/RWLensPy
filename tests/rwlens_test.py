@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm,SymLogNorm
 from time import time
-from scipy.fft import rfft,irfft,fft,ifft,fftfreq,fftshift,rfftfreq
+from scipy.fft import rfft,irfft,fft,ifft,fftfreq,fftshift,rfftfreq,fftn,ifftn
 
 import matplotlib as mpl
 from rwlenspy.baseband_sim import *
@@ -152,18 +152,16 @@ def grav_delay(vec_x,vec_y,eins,mass):
     return Eins_time_const*mass*(0.5*r**2 - np.log(r) )
 
 
-def get_plasma_Ne(rx,ry,dr,theta_in,theta_out,C2_n=1,freq=1,D_eff=1,seed=None,plot=False):
+def get_plasma_Ne(rx_size,ry_size,dr,theta_in,theta_out,C2_n=1,freq=1,D_eff=1,seed=None,plot=False):
     
     theta_fres = np.sqrt(c.c/(2*np.pi*freq* D_eff)).to(u.m/u.m)
     t_inn = theta_in/theta_fres
     t_out = theta_out/theta_fres
     
-    eta1v = rx/theta_fres
-    eta2v = ry/theta_fres
     dtheta = dr/theta_fres
     
-    k_1 = fftfreq(eta_1.size,d=dtheta)
-    k_2 = fftfreq(eta_2.size,d=dtheta)
+    k_1 = fftfreq(rx_size,d=dtheta)
+    k_2 = fftfreq(ry_size,d=dtheta)
     k1v, k2v = np.meshgrid(k_1,k_2)
 
     kv_max = np.amax(np.sqrt(k1v**2 + k2v**2))
@@ -171,7 +169,7 @@ def get_plasma_Ne(rx,ry,dr,theta_in,theta_out,C2_n=1,freq=1,D_eff=1,seed=None,pl
     if type(seed) is not None:
         np.random.seed(seed)
     
-    n_e = np.random.normal(loc=0,scale=1,size=eta1v.shape)
+    n_e = np.random.normal(loc=0,scale=1,size=(rx_size,ry_size))
     n_e = fftn(n_e,axes=(-2,-1))
 
     lmin = t_inn.value
@@ -398,11 +396,15 @@ theta_p0 = (theta_fres0 * np.sqrt(r_e* c.c * DM_0 / freq0 )).to(u.m/u.m)
 print(f'p scale : {p_scale} | theta inner: {theta_inner} | theta fres: {theta_fres0} | theta p0: {theta_p0}')
 print(f'p scale / theta fres: {p_scale/theta_fres0} | p scale /  theta p0: {p_scale /theta_p0}')
 
-theta_char = theta_p0
-max_fres = 3*theta_char
+#theta_char = p_scale
+#max_fres = 5*theta_char
+
+theta_char = theta_fres0
+max_fres = theta_char * 5000
+
 theta_min = -max_fres.value
 theta_max = max_fres.value
-theta_N = 1001
+theta_N = 501
 
 dump_frames = 1000
 freqs = 800e6 - rfftfreq(2048*dump_frames, d=1/800e6)
@@ -414,7 +416,8 @@ freq_ii = 400 * u.MHz
 freq_ii = freq_ii.to(u.Hz).value
 
 beta_x = 0.0
-beta_y = 0.8*theta_char.value
+#beta_y = 3*theta_char.value
+beta_y = 0
 
 geom_const = ((1/(const_r2*c.c)).to(u.s)).value
 lens_const = ((r_e * c.c  /( 2 * np.pi)).to(u.cm**2/u.s) * ((1.0*u.pc/u.cm).to(u.m/u.m)).value).value # k_DM
@@ -425,18 +428,25 @@ print(lens_const / (400e6**2))
 x1 = np.arange(theta_N)* (theta_max - theta_min ) / (theta_N - 1) + theta_min
 #lens_arr = 0.7 * np.ones((theta_N*theta_N)) #np. np.exp(-0.5*()/p_scale.value )#np.random.normal(size=(theta_N*theta_N))
 
-posx = 0*theta_char.value
-posy = 0
+de1 = np.abs(x1[1] - x1[0])
 
-r = np.sqrt(x1[:,None]**2 + x1[None,:]**2)
-r0 = np.sqrt(posx**2 + posy**2)
+#posx = 0*theta_char.value
+#posy = 0*theta_char.value
+
+#r = np.sqrt(x1[:,None]**2 + x1[None,:]**2)
+#r0 = np.sqrt(posx**2 + posy**2)
 
 seed=np.random.randint(1,10000)
-print('seed: ',seed)
-#ne = get_plasma_Ne(eta1v,eta2v,de1,theta_inner,theta_outer,\
-#                   C2_n=1e-1,freq=freq0,D_eff=1/const_r2,seed=seed,plot=True)
+print('seed: ',seed) #6339
 
-lens_arr = 0.03 * np.exp(-0.5*( (x1[:,None])**2 + (x1[None,:])**2)/p_scale.value**2)
+
+ne = get_plasma_Ne(x1.size,x1.size,de1,theta_inner,theta_outer,\
+                   C2_n=3e-11,freq=freq0,D_eff=1/const_r2,seed=seed,plot=False)
+
+lens_arr = ne
+
+#lens_arr = 0.03 * np.exp(-0.5*( (x1[:,None])**2 + (x1[None,:])**2)/p_scale.value**2)
+
 #lens_arr = 0.03 * np.exp(-0.5*((r-r0)**2)/p_scale.value**2)
 geom_arr = 0.5*( (x1[:,None]-beta_x)**2 + (x1[None,:] - beta_y)**2)
 
@@ -474,6 +484,7 @@ ferm = ferm.ravel()
 lens_arr = lens_arr.astype(np.double).ravel()
 geom_arr = geom_arr.astype(np.double).ravel()
 
+print('Getting the transfer function')
 t1 = time()
 transferfunc = rwl.RunPlasmaTransferFunc(
                                        geom_arr,
@@ -506,7 +517,7 @@ transferfunc = rwl.RunPlasmaTransferFunc(
 tv = time() - t1
 print('Total Time :',tv,'s',' | ',tv/60,'min',tv/3600,'hr')
 
-transferfunc = np.asarray(transferfunc)[::-1]
+transferfunc = np.asarray(transferfunc)[::-1].conj()
 print(transferfunc)
 impulse = fftshift(irfft(transferfunc))
 
@@ -516,8 +527,15 @@ sim = BasebandSim(W=dump_frames,diagnostic=False,upsample=1)
 sim.FRBSignal(2.56e-6*10,snr=snr_inj*(1*2048),polratio=0.66)
 sim.CreateVoltageStream(addnoise=False)
 vr = sim.v_stream[0,:].copy()
+plt.figure()
+plt.plot(np.arange(vr.shape[0])*1.25e-9,np.abs(vr))
+plt.yscale('log')
+plt.xlabel('time [s]')
+plt.ylabel('Input Signal [arb.]')
+plt.savefig('test_rwlens_fig3.png')
+
 vr = rfft(vr,axis=-1)
-vr = vr*transferfunc.conj()/np.sqrt(np.mean(np.abs(transferfunc)**2))    
+vr = vr*transferfunc/np.sqrt(np.mean(np.abs(transferfunc)**2))    
 vr = irfft(vr,axis=-1)
 
 sim.v_stream[0,:] = vr #+ np.random.normal(scale=0.1,size=vr.shape[0])
@@ -525,9 +543,14 @@ sim.v_stream[1,:] = vr #+ np.random.normal(scale=0.1,size=vr.shape[0])
 
 sim.CreateWaterfall(plot=True,sig_freqs=[400e6,801e6],apply_rfimask=False,addnoise=False)
 
+np.save('test_sim_wfall.npy',sim.v_fall)
+
 plt.figure()
-plt.imshow(np.mean(np.abs(sim.v_fall)**2,axis=1),aspect='auto',norm=LogNorm())
+plt.imshow(np.mean(np.abs(sim.v_fall)**2,axis=1),aspect='auto',\
+           extent=[0,sim.v_fall.shape[-1]*2.56e-6,400,800],norm=LogNorm())
 plt.colorbar()
+plt.ylabel('Freq [MHz]')
+plt.xlabel('Time [sec]')
 plt.savefig('test_full_wfall.png')
 
 plt.figure()
@@ -538,10 +561,10 @@ plt.savefig('test_rwlens_fig1.png')
 
 plt.figure()
 plt.plot(np.arange(impulse.shape[0])*1.25e-9,np.abs(impulse))
+plt.yscale('log')
 plt.xlabel('time [s]')
 plt.ylabel('Impulse Response [arb.]')
 plt.savefig('test_rwlens_fig2.png')
-
 
 #tv = time() - t1
 #print('Total Time :',tv,'s',' | ',tv/60,'min',tv/3600,'hr')            

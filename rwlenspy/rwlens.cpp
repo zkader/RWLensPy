@@ -79,9 +79,33 @@ std::complex<double> GetMag(const int itheta, const int jtheta, const int theta_
 	std::complex<double> magval, fxx,fxy,fyy;	
 	magval = 0.0+I*0.0;
 	
-	fxx = (fermat_pot[jtheta + theta_NM * (itheta+1)] - 2*fermat_pot[jtheta + theta_NM * itheta] + fermat_pot[jtheta + theta_NM * (itheta-1)])/(theta_step * theta_step) ;
-	fyy = (fermat_pot[(jtheta+1) + theta_NM * itheta] - 2*fermat_pot[jtheta + theta_NM * itheta] + fermat_pot[(jtheta-1) + theta_NM * itheta])/(theta_step * theta_step) ;	
-	fxy = (fermat_pot[(jtheta+1) + theta_NM * (itheta+1)] - fermat_pot[(jtheta+1) + theta_NM * (itheta-1)] - fermat_pot[(jtheta-1) + theta_NM * (itheta+1)] + fermat_pot[(jtheta-1) + theta_NM * (itheta-1)])/( 4.0*theta_step * theta_step) ;
+	fxx = ( -fermat_pot[(jtheta) + theta_NM * (itheta+2)]
+			+16.0*fermat_pot[(jtheta) + theta_NM * (itheta+1)]
+			-30.0*fermat_pot[(jtheta) + theta_NM * (itheta)]
+			+16.0*fermat_pot[(jtheta) + theta_NM * (itheta-1)]
+			-fermat_pot[(jtheta) + theta_NM * (itheta-2)]	
+		)/ (12.0 * theta_step * theta_step);
+
+	fyy = ( -fermat_pot[(jtheta+2) + theta_NM * (itheta)]
+			+16.0*fermat_pot[(jtheta+1) + theta_NM * (itheta)]
+			-30.0*fermat_pot[(jtheta) + theta_NM * (itheta)]
+			+16.0*fermat_pot[(jtheta-1) + theta_NM * (itheta)]
+			-fermat_pot[(jtheta-2) + theta_NM * (itheta)]	
+		)/ (12.0 * theta_step * theta_step);
+
+	fxy = ( -fermat_pot[(jtheta+2) + theta_NM * (itheta+2)]
+			+fermat_pot[(jtheta-2) + theta_NM * (itheta+2)]
+			+fermat_pot[(jtheta+2) + theta_NM * (itheta-2)]
+			-fermat_pot[(jtheta-2) + theta_NM * (itheta-2)]	
+			+16.0*fermat_pot[(jtheta+1) + theta_NM * (itheta+1)]
+			-16.0*fermat_pot[(jtheta-1) + theta_NM * (itheta+1)]
+			-16.0*fermat_pot[(jtheta+1) + theta_NM * (itheta-1)]
+			+16.0*fermat_pot[(jtheta-1) + theta_NM * (itheta-1)]
+		)/ (48.0 * theta_step * theta_step);
+		
+	//fxx = (fermat_pot[jtheta + theta_NM * (itheta+1)] - 2*fermat_pot[jtheta + theta_NM * itheta] + fermat_pot[jtheta + theta_NM * (itheta-1)])/(theta_step * theta_step) ;
+	//fyy = (fermat_pot[(jtheta+1) + theta_NM * itheta] - 2*fermat_pot[jtheta + theta_NM * itheta] + fermat_pot[(jtheta-1) + theta_NM * itheta])/(theta_step * theta_step) ;	
+	//fxy = (fermat_pot[(jtheta+1) + theta_NM * (itheta+1)] - fermat_pot[(jtheta+1) + theta_NM * (itheta-1)] - fermat_pot[(jtheta-1) + theta_NM * (itheta+1)] + fermat_pot[(jtheta-1) + theta_NM * (itheta-1)])/( 4.0*theta_step * theta_step) ;
 		
 	magval = fxx*fyy - fxy*fxy;
 	if(magval == 0.0 + I*0.0 )
