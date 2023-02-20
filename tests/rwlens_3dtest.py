@@ -9,7 +9,6 @@ from time import time
 from scipy.fft import rfft,irfft,fft,ifft,fftfreq,fftshift,rfftfreq,fftn,ifftn
 
 import matplotlib as mpl
-from rwlenspy.baseband_sim import *
 
 GREYMAP = mpl.cm.__dict__["Greys"]
 
@@ -27,7 +26,6 @@ from astropy import units as u
 from astropy import constants as c
 from astropy import cosmology
 
-
 import rwlenspy.lensing as rwl
 from rwlenspy.utils import *
 
@@ -38,7 +36,7 @@ cosmo = cosmology.Planck18
 # |              |               |              |
 # |              |               |              |
 # |              |               |              |
-# obs            r1             r2              src  
+# obs            r1             r2              src
 ############################################################
 
 # Comoving
@@ -127,7 +125,6 @@ def1 = np.abs(freqs[1] - freqs[0])
 seed=np.random.randint(1,10000)
 print('seed: ',seed) #6339
 
-
 ne = get_plasma_Ne(x1.size,x1.size,de1,theta_inner,theta_outer,\
                    C2_n=2e-11,freq=freq0,D_eff=1/const_r2,seed=seed,plot=False)
 
@@ -147,71 +144,46 @@ geom_arr = geom_arr.astype(np.double).ravel()
 
 print('Getting the transfer function')
 t1 = time()
-transferfunc = rwl.RunPlasmaTransferFunc(
-                                       geom_arr,
-                                       lens_arr,
-                                       theta_min,
-                                       theta_max,
-                                       theta_N,
-                                       beta_x,
-                                       beta_y,
-                                       freq_min,
-                                       freq_max,
-                                       freq_N,
-                                       geom_const,
-                                       lens_const)
-
+xinds,yinds,finds = rwl.GetFreqStationaryPoints( geom_arr,
+                                  lens_arr,
+                                  theta_min,
+                                  theta_max,
+                                  theta_N,
+                                  beta_x,
+                                  beta_y,
+                                  freq_min,
+                                  freq_max,
+                                  freq_N,
+                                  geom_const,
+                                  lens_const)
 tv = time() - t1
 print('Total Time :',tv,'s',' | ',tv/60,'min',tv/3600,'hr')
 
-transferfunc = np.asarray(transferfunc)[::-1]#.conj()
-print(transferfunc)
-impulse = fftshift(irfft(transferfunc))
+xinds = np.asarray(xinds)
+yinds = np.asarray(yinds)
+finds = np.asarray(finds)
 
-snr_inj=9
+txvals = (theta_max - theta_min)/ (theta_N -1 ) * xinds + theta_min
+tyvals = (theta_max - theta_min)/ (theta_N -1 ) * yinds + theta_min
+fvals = (freq_max - freq_min)/ (freq_N -1 ) * finds + freq_min
 
-sim = BasebandSim(W=dump_frames,diagnostic=False,upsample=1)
-sim.FRBSignal(2.56e-6*10,snr=snr_inj*(1*2048),polratio=0.66)
-sim.CreateVoltageStream(addnoise=False)
-vr = sim.v_stream[0,:].copy()
-plt.figure()
-plt.plot(np.arange(vr.shape[0])*1.25e-9,np.abs(vr))
-plt.yscale('log')
-plt.xlabel('time [s]')
-plt.ylabel('Input Signal [arb.]')
-plt.savefig('test_rwlens_fig3.png',transparent=True)
+delayvals = geom_const*geom_arr[yinds + theta_N*xinds ] +  lens_const*fvals**(-2) * lens_arr[yinds + theta_N*xinds]
 
-vr = rfft(vr,axis=-1)
-vr = vr*transferfunc/np.sqrt(np.mean(np.abs(transferfunc)**2))    
-vr = irfft(vr,axis=-1)
+#magvals = #GetPntMag()
 
-sim.v_stream[0,:] = vr #+ np.random.normal(scale=0.1,size=vr.shape[0])
-sim.v_stream[1,:] = vr #+ np.random.normal(scale=0.1,size=vr.shape[0])
+fig = plt.figure()
+ax = plt.axes(projection='3d')
+ax.scatter(fvals/1e6, tyvals*206264.806247/1e-9, txvals*206264.806247/1e-9,s=4)
+ax.set_xlabel('Freq [MHz]')
+ax.set_ylabel('$\\theta_X$ [nanoarcsec]')
+ax.set_zlabel('$\\theta_Y$ [nanoarcsec]')
+plt.savefig('test_statpoints.png')
 
-sim.CreateWaterfall(plot=True,sig_freqs=[400e6,801e6],apply_rfimask=False,addnoise=False)
-
-np.save('test_sim_wfall.npy',sim.v_fall)
-
-plt.figure()
-plt.imshow(np.mean(np.abs(sim.v_fall)**2,axis=1),aspect='auto',\
-           extent=[0,sim.v_fall.shape[-1]*2.56e-6,400,800],norm=LogNorm())
-plt.colorbar()
-plt.ylabel('Freq [MHz]')
-plt.xlabel('Time [sec]')
-plt.savefig('test_full_wfall.png',transparent=True)
-
-plt.figure()
-plt.plot(np.linspace(freq_min,freq_max,freq_N)/1e6,np.abs(transferfunc))
-plt.xlabel('Freq [MHz]')
-plt.ylabel('Transfer Func [arb.]')
-plt.savefig('test_rwlens_fig1.png',transparent=True)
-
-plt.figure()
-plt.plot(np.arange(impulse.shape[0])*1.25e-9,np.abs(impulse))
-plt.yscale('log')
-plt.xlabel('time [s]')
-plt.ylabel('Impulse Response [arb.]')
-plt.savefig('test_rwlens_fig2.png',transparent=True)
-
-#tv = time() - t1
-#print('Total Time :',tv,'s',' | ',tv/60,'min',tv/3600,'hr')            
+fig = plt.figure()
+ax = plt.axes(projection='3d')
+axsc = ax.scatter(fvals/1e6, tyvals*206264.806247/1e-9, txvals*206264.806247/1e-9, c=delayvals, s=4)
+fig.colorbar(axsc)
+ax.set_xlabel('Freq [MHz]')
+ax.set_ylabel('$\\theta_X$ [nanoarcsec]')
+ax.set_zlabel('$\\theta_Y$ [nanoarcsec]')
+plt.savefig('test_delay_statpoints.png')

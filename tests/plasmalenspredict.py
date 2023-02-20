@@ -77,26 +77,34 @@ theta_max = max_fres
 theta_N = 1001
 
 xvv = np.linspace(theta_min,theta_max,theta_N)
-yvv = 3*p_scale.value
+yvv = 1.75*p_scale.value
 avv = p_scale.value
 
 lensvv = lambda x,a: (1 - np.exp(-0.5*x*x/(a*a))/(a*a))*x
 lenstvv = lambda x,y,a: 0.5*(x-y)**2 + np.exp(-0.5*x**2/a**2)   
 lensmvv = lambda x,a: ( 1+0j - (2 - x*x/a*a + (1 -  x*x/a*a)*np.exp(-0.5*x*x/(a*a))/(a*a) )* np.exp(-0.5*x*x/(a*a))/(a*a) )**-0.5
+lensfvv = lambda x,y,a: ( np.exp(-0.5*x*x/(a*a))  /( 0.5*(x-y)**2 ) )**0.5
 
 
-r_e = c.alpha**2 * c.a0 # classical electron radius
 plasma_const = r_e * c.c  /( 2 * np.pi * ((400* u.MHz ).to(1/u.s))**2)
 plasma_const = plasma_const.to(u.pc**-1*u.cm**3 * u.s)    
 DM_0 = 0.03* u.pc *u.cm**-3 
 plasma_time_factor =  (plasma_const * DM_0 ).to(u.s)
 
-#freqsvv = np.linspace(800,400,1025)*1e6 * u.Hz
+#freqsvv = np.linspace(1600,400,1024*3+1)*1e6 * u.Hz
 freqsvv = (800e6 - rfftfreq(2048,d=1/800e6)[:-1]) * u.Hz
+
+defr = np.abs(freqsvv[1] - freqsvv[0])
 
 timeconst = (r_e * c.c *DM_0  /( 2 * np.pi * ((freqsvv).to(1/u.s))**2) ).to(u.s)
 theta_plasmavv = np.sqrt( timeconst * c.c * const_r2 ).to(u.m/u.m)    
 tf = p_scale / theta_plasmavv  
+
+geom_const = (1/(const_r2*c.c)).to(u.s).value
+lens_const = ((r_e * c.c  /( 2 * np.pi)).to(u.cm**2/u.s) * ((1.0*u.pc/u.cm).to(u.m/u.m)).value).value # k_DM
+freq_const = np.sqrt( (lens_const*DM_0.value) / (geom_const) )*u.Hz
+print(geom_const)
+print(lens_const)
 
 #plt.figure()
 #plt.scatter(np.zeros_like(xvv),xvv*206264.806247/1e-9\
@@ -111,11 +119,22 @@ freqvv = np.array([])
 xposvv = np.array([])
 i_delvv = np.array([])
 i_magvv = np.array([])
-for ii,tfi in enumerate(tf):    
+for ii,tfi in enumerate(tf):
+    
     idx = np.argwhere(np.diff(np.sign(lensvv(xvv / theta_plasmavv[ii],\
                                              tfi ) \
                                       - yvv / theta_plasmavv[ii]) \
                                      )).flatten()
+    
+    nidx = np.argwhere(np.diff(np.sign( (freq_const.value*lensfvv(xvv ,\
+                                            yvv ,\
+                                            p_scale ) \
+                                      - freqsvv[ii].value) \
+                                      ))).flatten()
+    for jn in nidx:
+        if jn in idx:
+            print(freqsvv[ii])
+
     
     freqvv = np.append(freqvv,freqsvv[ii].value*np.ones(idx.size))
     xposvv = np.append(xposvv,xvv[idx])
@@ -144,7 +163,7 @@ plt.ylabel('Image Position [nanoarcsec]')
 plt.title('mag [ul]')
 plt.savefig('plens_mag.png')
 
-
+print('plotted')
 dumpframes = 1000
 plot_bbd = np.zeros((freqsvv.shape[0],dumpframes),dtype=np.complex128)
 

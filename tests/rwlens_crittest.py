@@ -38,7 +38,7 @@ cosmo = cosmology.Planck18
 # |              |               |              |
 # |              |               |              |
 # |              |               |              |
-# obs            r1             r2              src  
+# obs            r1             r2              src
 ############################################################
 
 # Comoving
@@ -142,76 +142,88 @@ geom_arr = 0.5*( (x1[:,None]-beta_x)**2 + (x1[None,:] - beta_y)**2)
 #lens_arr = 50 *np.ones((theta_N,theta_N))
 #lens_arr = 1e-2*np.random.normal(loc=0,scale=1,size=(theta_N,theta_N))
 
-lens_arr = lens_arr.astype(np.double).ravel()
-geom_arr = geom_arr.astype(np.double).ravel()
+step = np.abs(x1[1] -x1[0])
+x1v,x2v = np.meshgrid(x1,x1)
 
-print('Getting the transfer function')
-t1 = time()
-transferfunc = rwl.RunPlasmaTransferFunc(
-                                       geom_arr,
-                                       lens_arr,
-                                       theta_min,
-                                       theta_max,
-                                       theta_N,
-                                       beta_x,
-                                       beta_y,
-                                       freq_min,
-                                       freq_max,
-                                       freq_N,
-                                       geom_const,
-                                       lens_const)
+for freqv in [400e6,500e6,600e6,700e6,800e6]:
+#freqv = 800e6
+    ferm = geom_const*geom_arr + lens_const/(freqv**2)*lens_arr
+    #ferm = ferm.astype(np.double)
 
-tv = time() - t1
-print('Total Time :',tv,'s',' | ',tv/60,'min',tv/3600,'hr')
+    crit_freq = np.sqrt( (lens_const * lens_arr) / (geom_const * geom_arr) )
 
-transferfunc = np.asarray(transferfunc)[::-1]#.conj()
-print(transferfunc)
-impulse = fftshift(irfft(transferfunc))
+    #crit_freq[(crit_freq < 400e6)] = np.nan
+    #crit_freq[(crit_freq > 800e6)] = np.nan
 
-snr_inj=9
+    critcut = np.abs(crit_freq -freqv) < def1*dump_frames
+    critpntsx1 = x1v[critcut]
+    critpntsx2 = x2v[critcut]
+    critmag = []
+    for indexs in np.argwhere(critcut):
+        critmag.append(GetPntMag(indexs[0],indexs[1],step,ferm))
+    critdel = ferm[critcut]
 
-sim = BasebandSim(W=dump_frames,diagnostic=False,upsample=1)
-sim.FRBSignal(2.56e-6*10,snr=snr_inj*(1*2048),polratio=0.66)
-sim.CreateVoltageStream(addnoise=False)
-vr = sim.v_stream[0,:].copy()
+    statpntsx1 = []
+    statpntsx2 = []
+    statmag = []
+    statdel = []
+
+    for i in range(2,ferm.shape[0]-2):
+        for j in range(2,ferm.shape[1]-2):
+            if GetStatPnt(ferm,i,j):
+                statpntsx1.append(x1v[i,j])
+                statpntsx2.append(x2v[i,j])
+                statmag.append(GetPntMag(i,j,step,ferm))
+                statdel.append(ferm[i,j])
+
+        #if GetStatPnt(crit_freq - freqv,i,j):
+        #    critpntsx1.append(x1v[i,j])
+        #    critpntsx2.append(x2v[i,j])
+
+    #print(critpntsx1.shape)
+    
+    statpntsx1 = np.asarray(statpntsx1)
+    statpntsx2 = np.asarray(statpntsx2)
+    critpntsx1 = np.asarray(critpntsx1)
+    critpntsx2 = np.asarray(critpntsx2)
+
+    critmag = np.asarray(critmag)
+    critdel = np.asarray(critdel)
+    statmag = np.asarray(statmag)
+    statdel = np.asarray(statdel)
+
+    plt.figure()
+    plt.pcolormesh(x1*206264.806247/1e-9,x1*206264.806247/1e-9,ferm*2*np.pi*freqv)
+    plt.colorbar()
+    #plt.scatter(critpntsx1,critpntsx2,c='r')
+    plt.scatter(statpntsx1*206264.806247/1e-9,statpntsx2*206264.806247/1e-9,c='k',s=4)
+    plt.ylabel('Image Position [nanoarcsec]')
+    plt.xlabel('Image Position [nanoarcsec]')
+    plt.savefig(f'ferm_full_{freqv/1e6}.png',transparent=True)
+
+    plt.figure()
+    plt.scatter(statpntsx1*206264.806247/1e-9,statpntsx2*206264.806247/1e-9,c=statdel*2*np.pi*freqv,s=5)
+    plt.scatter(critpntsx1*206264.806247/1e-9,critpntsx2*206264.806247/1e-9,c=critdel*2*np.pi*freqv,s=5)
+    plt.colorbar()
+    plt.ylabel('Image Position [nanoarcsec]')
+    plt.xlabel('Image Position [nanoarcsec]')
+    plt.savefig(f'fermdel_full_{freqv/1e6}.png',transparent=True)
+
+    norm = 2*np.pi *freqv* geom_const/(lens_const/(freqv**2))
+
+    plt.figure()
+    plt.scatter(statpntsx1*206264.806247/1e-9,statpntsx2*206264.806247/1e-9,c=np.abs(statmag)*np.sqrt(norm),s=5)
+    plt.scatter(critpntsx1*206264.806247/1e-9,critpntsx2*206264.806247/1e-9,c=np.abs(critmag)*np.sqrt(norm),s=5)
+    plt.colorbar()
+    plt.ylabel('Image Position [nanoarcsec]')
+    plt.xlabel('Image Position [nanoarcsec]')
+    plt.savefig(f'fermmag_full_{freqv/1e6}.png',transparent=True)
+    print('saved ')
+
+
 plt.figure()
-plt.plot(np.arange(vr.shape[0])*1.25e-9,np.abs(vr))
-plt.yscale('log')
-plt.xlabel('time [s]')
-plt.ylabel('Input Signal [arb.]')
-plt.savefig('test_rwlens_fig3.png',transparent=True)
-
-vr = rfft(vr,axis=-1)
-vr = vr*transferfunc/np.sqrt(np.mean(np.abs(transferfunc)**2))    
-vr = irfft(vr,axis=-1)
-
-sim.v_stream[0,:] = vr #+ np.random.normal(scale=0.1,size=vr.shape[0])
-sim.v_stream[1,:] = vr #+ np.random.normal(scale=0.1,size=vr.shape[0])
-
-sim.CreateWaterfall(plot=True,sig_freqs=[400e6,801e6],apply_rfimask=False,addnoise=False)
-
-np.save('test_sim_wfall.npy',sim.v_fall)
-
-plt.figure()
-plt.imshow(np.mean(np.abs(sim.v_fall)**2,axis=1),aspect='auto',\
-           extent=[0,sim.v_fall.shape[-1]*2.56e-6,400,800],norm=LogNorm())
+plt.pcolormesh(x1*206264.806247/1e-9,x1*206264.806247/1e-9,crit_freq/1e6,vmin=400,vmax=800)
+plt.ylabel('Image Position [nanoarcsec]')
+plt.xlabel('Image Position [nanoarcsec]')
 plt.colorbar()
-plt.ylabel('Freq [MHz]')
-plt.xlabel('Time [sec]')
-plt.savefig('test_full_wfall.png',transparent=True)
-
-plt.figure()
-plt.plot(np.linspace(freq_min,freq_max,freq_N)/1e6,np.abs(transferfunc))
-plt.xlabel('Freq [MHz]')
-plt.ylabel('Transfer Func [arb.]')
-plt.savefig('test_rwlens_fig1.png',transparent=True)
-
-plt.figure()
-plt.plot(np.arange(impulse.shape[0])*1.25e-9,np.abs(impulse))
-plt.yscale('log')
-plt.xlabel('time [s]')
-plt.ylabel('Impulse Response [arb.]')
-plt.savefig('test_rwlens_fig2.png',transparent=True)
-
-#tv = time() - t1
-#print('Total Time :',tv,'s',' | ',tv/60,'min',tv/3600,'hr')            
+plt.savefig('ferm_critfreq.png',transparent=True)    
