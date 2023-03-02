@@ -105,6 +105,8 @@ def map_grav_p(vec_x,vec_y,eins):
     r = np.sqrt(vec_x**2 + vec_y**2)
     mag = 0.5 * ( r + np.sqrt(r**2 + 4 * eins**2 ) )
 
+    return mag*np.cos(ang), mag*np.sin(ang)
+    
 def map_grav_m(vec_x,vec_y,eins):
     # map to lensing plane
     ang = np.mod( np.arctan2(vec_y, vec_x) + 2 * np.pi, 2 * np.pi)
@@ -213,3 +215,50 @@ def GetPntMag(itheta, jtheta, theta_step, fermat_pot):
         else:
             magval = 1/np.sqrt(magval)
             return magval
+
+def PntMagVal(xinds,
+              yinds,
+              theta_step,
+              theta_N,
+              geom_arr,
+              lens_arr,
+              geom_const,
+              lens_const,
+              freqvals,
+              get_eigs=False
+             ):
+    
+        def _fermat_pot(xi,yi):
+            return geom_const*geom_arr[yi + theta_N*xi ] + lens_const*fvals**(-2) * lens_arr[yi + theta_N*xi]            
+                
+        fxx = ( -_fermat_pot(xinds+2,yinds)
+                        +16.0*_fermat_pot(xinds+1,yinds)
+                        -30.0*_fermat_pot(xinds,yinds)
+                        +16.0*_fermat_pot(xinds-1,yinds)
+                        -_fermat_pot(xinds-2,yinds)
+                )/ (12.0 * theta_step * theta_step)
+
+        fyy = ( -_fermat_pot(xinds,yinds+2)
+                        +16.0*_fermat_pot(xinds,yinds+1)
+                        -30.0*_fermat_pot(xinds,yinds)
+                        +16.0*_fermat_pot(xinds,yinds-1)
+                        -_fermat_pot(xinds,yinds-2)
+                )/ (12.0 * theta_step * theta_step)
+        fxy = ( -_fermat_pot(xinds+2,yinds+2)
+                        +_fermat_pot(xinds+2,yinds-2)
+                        +_fermat_pot(xinds-2,yinds+2)
+                        -_fermat_pot(xinds-2,yinds-2)
+                        +16.0*_fermat_pot(xinds+1,yinds+1)
+                        -16.0*_fermat_pot(xinds+1,yinds-1)
+                        -16.0*_fermat_pot(xinds-1,yinds+1)
+                        +16.0*_fermat_pot(xinds-1,yinds-1)
+                )/ (48.0 * theta_step * theta_step)
+
+        if get_eigs:
+            return fxx * geom_const,fyy * geom_const,fxy * geom_const
+        else:
+            magval = fxx*fyy - fxy*fxy + 0j
+            magval[magval == 0.0+0j] = 0.0+0j
+            magval[magval != 0.0+0j] = 1/np.sqrt(magval[magval != 0.0+0j])
+
+            return magval * geom_const

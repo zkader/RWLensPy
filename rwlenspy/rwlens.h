@@ -21,8 +21,9 @@ std::complex<double> GetTransferFuncVal(
 	const double theta_step,
 	const int theta_NM, 
 	double freq,                    // [Hz]
-	std::vector<double> &fermat_pot // [s]
-); 
+	std::vector<double> &fermat_pot, // [s]
+	const double geom_factor // [1/s]
+);
 
 void GetFreqImage(
 	const int theta_NM,
@@ -36,7 +37,8 @@ std::complex<double> GetMag(
 	const int jtheta,
 	const int theta_NM,
 	const double theta_step, 
-	std::vector<double> &fermat_pot
+	std::vector<double> &fermat_pot,
+    const double geom_factor
 );
 
 bool IsStationary(

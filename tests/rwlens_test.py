@@ -124,12 +124,12 @@ def1 = np.abs(freqs[1] - freqs[0])
 #r = np.sqrt(x1[:,None]**2 + x1[None,:]**2)
 #r0 = np.sqrt(posx**2 + posy**2)
 
-seed=np.random.randint(1,10000)
+seed=3665#np.random.randint(1,10000)
 print('seed: ',seed) #6339
 
 
 ne = get_plasma_Ne(x1.size,x1.size,de1,theta_inner,theta_outer,\
-                   C2_n=2e-11,freq=freq0,D_eff=1/const_r2,seed=seed,plot=False)
+                   C2_n=3e-11,freq=freq0,D_eff=1/const_r2,seed=seed,plot=False)
 
 lens_arr = ne
 

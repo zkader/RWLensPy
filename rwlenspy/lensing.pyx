@@ -65,7 +65,7 @@ cpdef vector[complex] RunPlasmaTransferFunc(vector[double] geom_arr,
             lens_factor = lens_const / (freq_val * freq_val)
 
             SetFermatPotential(geom_const, lens_factor, geom_arr, lens_arr, fermat_pot)
-            tfunc[freq_ii] = GetTransferFuncVal(theta_step, theta_N, freq_val, fermat_pot)
+            tfunc[freq_ii] = GetTransferFuncVal(theta_step, theta_N, freq_val, fermat_pot, geom_const)
 
     return tfunc
 
