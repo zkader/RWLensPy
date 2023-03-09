@@ -69,6 +69,48 @@ cpdef vector[complex] RunPlasmaTransferFunc(vector[double] geom_arr,
 
     return tfunc
 
+cpdef vector[complex] RunPlasmaGravTransferFunc(vector[double] geom_arr,
+                                       vector[double] lens_arr,
+                                       double theta_min,
+                                       double theta_max,
+                                       int theta_N,
+                                       double beta_x,
+                                       double beta_y,
+                                       double freq_min,
+                                       double freq_max,
+                                       int freq_N,
+                                       double geom_const,
+                                       double lens_const,
+                                       double eins,
+                                       double mass,
+                                       double betaE_x,
+                                       double betaE_y
+                                       ):
+    # T(theta) = geom_const*geom_arr(theta,beta) + lens_const*freq^-2*lens_arr(theta)
+    # mass in M_sol
+    cdef vector[complex] tfunc = vector[complex](freq_N)
+    cdef vector[double] fermat_pot
+
+    cdef int freq_ii
+    cdef double theta_step, freq_step, freq_val
+    cdef double lens_factor
+
+    theta_step = (theta_max - theta_min) /  (theta_N - 1)
+    freq_step = (freq_max - freq_min) /  (freq_N - 1)				       
+
+    with nogil, parallel():
+        for freq_ii in prange(freq_N):
+            freq_val = freq_step * freq_ii + freq_min
+            fermat_pot = vector[double](theta_N*theta_N)
+            lens_factor = lens_const / (freq_val * freq_val)
+
+            SetFermatPotential(geom_const, lens_factor, geom_arr, lens_arr, fermat_pot)
+            tfunc[freq_ii] = GetGravTransferFuncVal(theta_step, theta_N, theta_min,\
+                                                   freq_val, fermat_pot, geom_const,\
+                                                   eins, mass, betaE_x, betaE_y)
+
+    return tfunc
+
 cpdef GetFreqStationaryPoints(vector[double] geom_arr,
                                        vector[double] lens_arr,
                                        double theta_min,

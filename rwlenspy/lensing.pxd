@@ -16,6 +16,18 @@ cdef extern from "rwlens.h":
                    double freq, vector[double]& fermat_pot,\
                    double geom_factor) nogil
 
+    double complex GetGravTransferFuncVal(
+	double theta_step,
+	int theta_NM, 
+	double theta_min,
+	double freq,
+	vector[double]& fermat_pot,
+        double geom_factor,
+	double eins,
+	double mass,
+        double beta_x,
+        double beta_y) nogil
+
     void GetFreqImage(int theta_NM, int freqind,\
                       vector[double] &fermat_pot,\
                       vector[imagepoint] &freq_images) nogil

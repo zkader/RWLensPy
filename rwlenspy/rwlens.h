@@ -16,6 +16,11 @@ typedef struct imagepoint {
 	int find;
 } imagepoint;
 
+typedef struct physpoint {
+	double thetax;
+	double thetay;
+} physpoint;
+
 // 
 std::complex<double> GetTransferFuncVal(
 	const double theta_step,
@@ -23,6 +28,19 @@ std::complex<double> GetTransferFuncVal(
 	double freq,                    // [Hz]
 	std::vector<double> &fermat_pot, // [s]
 	const double geom_factor // [1/s]
+);
+
+std::complex<double> GetGravTransferFuncVal(
+	const double theta_step,
+	const int theta_NM, 
+	const double theta_min,
+	double freq,
+	std::vector<double> &fermat_pot,
+    const double geom_factor,
+	const double eins,
+	const double mass,
+	const double beta_x,
+	const double beta_y
 );
 
 void GetFreqImage(
@@ -66,3 +84,25 @@ void SetFermatPotential(
 );
 
 int Sign(double val);
+
+physpoint map_grav_p(
+	const physpoint srcpos,
+	const double eins
+);
+
+physpoint map_grav_m(
+	const physpoint srcpos,
+	const double eins
+);
+
+std::complex<double> grav_magval(
+	const physpoint imgpos,
+	const double eins
+);
+
+double grav_delayval(
+	const physpoint imgpos,
+	const physpoint srcpos,
+	const double eins,
+	const double mass
+);

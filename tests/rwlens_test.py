@@ -80,6 +80,7 @@ theta_inner = (r_inner/D_obs_r2).to(u.m/u.m)
 theta_outer = (r_outer/D_obs_r2).to(u.m/u.m)
 theta_fres0 = np.sqrt(c.c/(2*np.pi*freq0) * const_r2).to(u.m/u.m)
 theta_p0 = (theta_fres0 * np.sqrt(r_e* c.c * DM_0 / freq0 )).to(u.m/u.m)
+theta_E = np.sqrt( mass*Eins_time_const*c.c*const_r1 ).to(u.m/u.m)
 print(f'p scale : {p_scale} | theta inner: {theta_inner} | theta fres: {theta_fres0} | theta p0: {theta_p0}')
 print(f'p scale / theta fres: {p_scale/theta_fres0} | p scale /  theta p0: {p_scale /theta_p0}')
 
@@ -93,7 +94,7 @@ theta_min = -max_fres.value
 theta_max = max_fres.value
 theta_N = 1001
 
-dump_frames = 1
+dump_frames = 100
 freqs = 800e6 - rfftfreq(2048*dump_frames, d=1/800e6)
 #freqs = np.linspace(800e6,400e6,1024)
 freq_min = freqs[-1]
@@ -129,7 +130,7 @@ print('seed: ',seed) #6339
 
 
 ne = get_plasma_Ne(x1.size,x1.size,de1,theta_inner,theta_outer,\
-                   C2_n=3e-11,freq=freq0,D_eff=1/const_r2,seed=seed,plot=False)
+                   C2_n=3e-12,freq=freq0,D_eff=1/const_r2,seed=seed,plot=False)
 
 lens_arr = ne
 
@@ -145,9 +146,12 @@ geom_arr = 0.5*( (x1[:,None]-beta_x)**2 + (x1[None,:] - beta_y)**2)
 lens_arr = lens_arr.astype(np.double).ravel()
 geom_arr = geom_arr.astype(np.double).ravel()
 
+eins = theta_E.value
+beta_E_x = 0.0*eins
+beta_E_y = 1.5*eins
 print('Getting the transfer function')
 t1 = time()
-transferfunc = rwl.RunPlasmaTransferFunc(
+transferfunc = rwl.RunPlasmaGravTransferFunc(
                                        geom_arr,
                                        lens_arr,
                                        theta_min,
@@ -159,7 +163,12 @@ transferfunc = rwl.RunPlasmaTransferFunc(
                                        freq_max,
                                        freq_N,
                                        geom_const,
-                                       lens_const)
+                                       lens_const,
+                                       eins,
+                                       mass,
+                                       beta_E_x,
+                                       beta_E_y
+)
 
 tv = time() - t1
 print('Total Time :',tv,'s',' | ',tv/60,'min',tv/3600,'hr')
@@ -182,13 +191,13 @@ plt.ylabel('Input Signal [arb.]')
 plt.savefig('test_rwlens_fig3.png',transparent=True)
 
 vr = rfft(vr,axis=-1)
-vr = vr*transferfunc/np.sqrt(np.mean(np.abs(transferfunc)**2))    
+vr = vr[::-1].conj()*transferfunc#/np.sqrt(np.mean(np.abs(transferfunc)**2))    
 vr = irfft(vr,axis=-1)
 
 sim.v_stream[0,:] = vr #+ np.random.normal(scale=0.1,size=vr.shape[0])
 sim.v_stream[1,:] = vr #+ np.random.normal(scale=0.1,size=vr.shape[0])
 
-sim.CreateWaterfall(plot=True,sig_freqs=[400e6,801e6],apply_rfimask=False,addnoise=False)
+sim.CreateWaterfall(plot=False,sig_freqs=[400e6,801e6],apply_rfimask=False,addnoise=False)
 
 np.save('test_sim_wfall.npy',sim.v_fall)
 

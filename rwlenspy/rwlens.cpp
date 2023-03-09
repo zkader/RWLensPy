@@ -28,6 +28,54 @@ std::complex<double> GetTransferFuncVal(
     return tfunc_val;
 } 
 
+std::complex<double> GetGravTransferFuncVal(
+	const double theta_step,
+	const int theta_NM, 
+	const double theta_min,
+	double freq,
+	std::vector<double> &fermat_pot,
+    const double geom_factor,
+	const double eins,
+	const double mass,
+	const double beta_x,
+	const double beta_y	
+)
+{
+	std::complex<double> tfunc_val = 0.0 + I*0.0;
+	
+    for(int itheta = 2; itheta < theta_NM - 2; itheta++)
+    {
+        for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
+        {
+			if( IsStationary(itheta, jtheta, theta_NM, fermat_pot) )
+			{
+				double imgphase,phase;
+				physpoint sourcepos,imagepos;
+				std::complex<double> mag, imgmag;
+				
+				mag = GetMag(itheta, jtheta, theta_NM, theta_step, fermat_pot, geom_factor);				
+				phase = 2 * pi * freq * fermat_pot[jtheta + theta_NM * itheta];
+				
+				sourcepos.thetax = theta_min + theta_step * itheta + beta_x;				
+				sourcepos.thetay = theta_min + theta_step * jtheta + beta_y;
+
+				imagepos = map_grav_p(sourcepos, eins);
+				imgmag = grav_magval(imagepos, eins);
+				imgphase = grav_delayval(imagepos, sourcepos, eins, mass);
+				imgphase = 2 * pi * freq * imgphase;
+				tfunc_val = tfunc_val + imgmag*mag*std::exp(I*(phase+imgphase));
+				
+				imagepos = map_grav_m(sourcepos, eins);
+				imgmag = grav_magval(imagepos, eins);
+				imgphase = grav_delayval(imagepos, sourcepos, eins, mass);								
+				imgphase = 2 * pi * freq * imgphase;				
+				tfunc_val = tfunc_val + imgmag*mag*std::exp(I*(phase+imgphase));
+			}
+        }
+    }		
+    return tfunc_val;
+} 
+
 void GetFreqImage(
 	const int theta_NM,
 	const int freqind,
@@ -161,4 +209,53 @@ void SetFermatPotential(
 
 int Sign(double val){
 	return (val > 0) - (val < 0);
+}
+
+physpoint map_grav_p(const physpoint srcpos, const double eins){
+    double ang = fmod( atan2(srcpos.thetay, srcpos.thetax) + 2 * pi, 2 * pi);
+    double norm = sqrt( srcpos.thetax*srcpos.thetax + srcpos.thetay * srcpos.thetay);
+    double mag = 0.5 * ( norm + sqrt(norm*norm + 4 * eins * eins ) );    
+	physpoint imgpos;
+	imgpos.thetax = mag*cos(ang);
+	imgpos.thetay = mag*sin(ang);
+
+    return imgpos;
+}
+
+physpoint map_grav_m(const physpoint srcpos, const double eins){
+    double ang = fmod( atan2(srcpos.thetay, srcpos.thetax) + 2 * pi, 2 * pi);
+    double norm = sqrt( srcpos.thetax*srcpos.thetax + srcpos.thetay * srcpos.thetay);
+    double mag = 0.5 * ( norm - sqrt(norm*norm + 4 * eins * eins ) );    
+	physpoint imgpos;
+	imgpos.thetax = mag*cos(ang);
+	imgpos.thetay = mag*sin(ang);
+
+    return imgpos;
+}
+
+std::complex<double> grav_magval(const physpoint imgpos, const double eins){
+	double norm = sqrt( imgpos.thetax*imgpos.thetax + imgpos.thetay * imgpos.thetay);
+
+    if(norm == 0)
+    {
+    	return 0.0;
+    } else if(norm == eins)
+    {
+        return -1.0;
+    } else
+    {
+        return pow( 1.0+0.0*I - pow((eins+0.0*I)/norm,4),-0.5);
+    }
+}
+
+double grav_delayval(const physpoint imgpos,const physpoint srcpos,const double eins,const double mass){
+    double Eins_time_const =  1.97E-5;//4*G*M_sun/c^3 in s/M_sun
+    
+    double rnorm = sqrt( (imgpos.thetax - srcpos.thetax)*(imgpos.thetax - srcpos.thetax) \
+	                   + (imgpos.thetay - srcpos.thetay)*(imgpos.thetay - srcpos.thetay) )/eins;
+	                   
+    double inorm = sqrt( imgpos.thetax*imgpos.thetax \
+	                   + imgpos.thetay*imgpos.thetay )/eins;
+
+    return Eins_time_const*mass*(0.5*rnorm*rnorm - log(inorm) );
 }

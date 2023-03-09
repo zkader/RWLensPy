@@ -115,7 +115,7 @@ def map_grav_m(vec_x,vec_y,eins):
 
     return mag*np.cos(ang), mag*np.sin(ang)
 
-def mag_grav(vec_x,vec_y,eins):
+def grav_mag(vec_x,vec_y,eins):
     # lensing plane
     r = np.sqrt(vec_x**2 + vec_y**2)
     mag = np.zeros_like(r)
@@ -124,11 +124,12 @@ def mag_grav(vec_x,vec_y,eins):
     mag[(r!=0)*(r!=eins) ] = ( 1 - (eins/r[(r!=0)*(r!=eins) ] )**4 )**(-1)
     return mag
 
-def grav_delay(vec_x,vec_y,eins,mass):
+def grav_delay(vec_x,vec_y,imp_x,imp_y,eins,mass):
     # lensing plane
     Eins_time_const = 4*c.G*c.M_sun/c.c**3
-    r = np.sqrt(vec_x**2 + vec_y**2)/eins
-    return Eins_time_const*mass*(0.5*r**2 - np.log(r) )
+    r1 = np.sqrt((vec_x-imp_x)**2 + (vec_y-imp_y)**2)/eins
+    r2 = np.sqrt((vec_x)**2 + (vec_y)**2)/eins
+    return Eins_time_const*mass*(0.5*r1**2 - np.log(r2) )
 
 def get_plasma_Ne(rx_size,ry_size,dr,theta_in,theta_out,C2_n=1,freq=1,D_eff=1,seed=None,plot=False):
 
