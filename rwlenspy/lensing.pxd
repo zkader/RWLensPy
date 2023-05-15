@@ -54,7 +54,8 @@ cdef extern from "rwlens.h":
     void SetGeometricDelayArr(double theta_min, double theta_max, int theta_NM, \
                              double beta_x, double beta_y, vector[double]& geom_arr) nogil
 
-    void SetFermatPotential(double time_scale, double theta_scale, \
+    void SetFermatPotential(double geom_factor, double lens_factor, \
+                            int theta_NM, double freq,\
                             vector[double]& geom_arr, vector[double]& lens_arr,\
                             vector[double]& fermat_pot) nogil
 

@@ -50,8 +50,8 @@ cpdef vector[complex] RunUnitlessTransferFunc(vector[double] lens_arr,
                                        ):
     # T(theta) = geom_const*geom_arr(theta,beta) + lens_const*freq^-2*lens_arr(theta)
     cdef vector[complex] tfunc = vector[complex](freq_N)
-    cdef vector[physpoints] grad_lens_arr = vector[physpoints](theta_N*theta_N)
-    cdef vector[physpoints] hess_lens_arr = vector[physpoints](theta_N*theta_N)
+    cdef vector[physpoint] grad_lens_arr = vector[physpoint](theta_N*theta_N)
+    cdef vector[physpoint] hess_lens_arr = vector[physpoint](theta_N*theta_N)
 	
     cdef physpoint beta_vec
     
@@ -72,17 +72,10 @@ cpdef vector[complex] RunUnitlessTransferFunc(vector[double] lens_arr,
             freq_val = freq_step * freq_ii + freq_min
             lens_factor = lens_const * freq_val**freq_power
 
-            tfunc[freq_ii] = GetTransferFuncVal( \
-                             theta_step, \
-                             theta_NM, \
-                             theta_min, \
-                             freq_val, \
-                             lens_arr, \
-                             grad_lens_arr, \
-                             hess_lens_arr, \
-                             geom_const, \
-                             lens_const, \
-                             beta_vec)
+            tfunc[freq_ii] = GetTransferFuncVal( theta_step, theta_N, theta_min,\
+                                                freq_val, lens_arr, grad_lens_arr,\
+                                               hess_lens_arr, geom_const, lens_factor, \
+                                               beta_vec)
 
     return tfunc
 
@@ -92,13 +85,13 @@ cpdef vector[complex] RunPlasmaTransferFunc(vector[double] geom_arr,
                                        double theta_min,
                                        double theta_max,
                                        int theta_N,
-				                       double beta_x,
-				                       double beta_y,
+                                       double beta_x,
+                                       double beta_y,
                                        double freq_min,
                                        double freq_max,
                                        int freq_N,
-				                       double geom_const,
-				                       double lens_const
+                                       double geom_const,
+                                       double lens_const
                                        ):
     # T(theta) = geom_const*geom_arr(theta,beta) + lens_const*freq^-2*lens_arr(theta)
     cdef vector[complex] tfunc = vector[complex](freq_N)
@@ -117,7 +110,7 @@ cpdef vector[complex] RunPlasmaTransferFunc(vector[double] geom_arr,
             fermat_pot = vector[double](theta_N*theta_N)
             lens_factor = lens_const / (freq_val * freq_val)
 
-            SetFermatPotential(geom_const, lens_factor, geom_arr, lens_arr, fermat_pot)
+            SetFermatPotential(geom_const, lens_factor, theta_N, freq_val, geom_arr, lens_arr, fermat_pot)
             tfunc[freq_ii] = GetTransferFuncVal(theta_step, theta_N, freq_val, fermat_pot, geom_const)
 
     return tfunc
@@ -157,7 +150,7 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(vector[double] geom_arr,
             fermat_pot = vector[double](theta_N*theta_N)
             lens_factor = lens_const / (freq_val * freq_val)
 
-            SetFermatPotential(geom_const, lens_factor, geom_arr, lens_arr, fermat_pot)
+            SetFermatPotential(geom_const, lens_factor, theta_N, freq_val, geom_arr, lens_arr, fermat_pot)
             tfunc[freq_ii] = GetGravTransferFuncVal(theta_step, theta_N, theta_min,\
                                                    freq_val, fermat_pot, geom_const,\
                                                    eins, mass, betaE_x, betaE_y)
@@ -198,7 +191,7 @@ cpdef GetFreqStationaryPoints(vector[double] geom_arr,
             fermat_pot = vector[double](theta_N*theta_N)
             lens_factor = lens_const / (freq_val * freq_val)
 
-            SetFermatPotential(geom_const, lens_factor, geom_arr, lens_arr, fermat_pot)
+            SetFermatPotential(geom_const, lens_factor, theta_N, freq_val, geom_arr, lens_arr, fermat_pot)
             GetFreqImage(theta_N, freq_ii, fermat_pot, freqpnts[freq_ii])
 
     cdef vector[int] testa,testb,testc
