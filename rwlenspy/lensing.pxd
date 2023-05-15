@@ -10,6 +10,8 @@ cdef extern from "rwlens.h":
         int xind
         int yind
         int find
+        double delay
+        double complex mag
 
     double complex GetTransferFuncVal(\
                    double theta_step, int theta_NM,\
@@ -28,10 +30,10 @@ cdef extern from "rwlens.h":
         double beta_x,
         double beta_y) nogil
 
-    void GetFreqImage(int theta_NM, int freqind,\
+    void GetFreqImage(double theta_step,int theta_NM, int freqind,\
                       vector[double] &fermat_pot,\
-                      vector[imagepoint] &freq_images) nogil
-
+                      vector[imagepoint] &freq_images, double geom_factor) nogil
+    
     double complex GetMag(int itheta, int jtheta, int theta_NM,\
                           double theta_step, vector[double]& fermat_pot,\
                           double geom_factor) nogil
@@ -42,5 +44,5 @@ cdef extern from "rwlens.h":
                              double beta_x, double beta_y, vector[double]& geom_arr) nogil
 
     void SetFermatPotential(double time_scale, double theta_scale, \
-                            vector[double]& geom_arr, vector[double]& lens_arr,\
-                            vector[double]& fermat_pot) nogil
+                            int theta_NM, double freq, vector[double]& geom_arr,
+                            vector[double]& lens_arr, vector[double]& fermat_pot) nogil

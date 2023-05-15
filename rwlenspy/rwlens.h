@@ -8,12 +8,15 @@
 #include <assert.h>
 
 const double pi = 3.14159265358979323846;
+
 const std::complex<double> I (0,1.0);
 
 typedef struct imagepoint {
 	int xind;
 	int yind;
 	int find;
+    double delay;
+    std::complex<double> mag;
 } imagepoint;
 
 typedef struct physpoint {
@@ -25,8 +28,8 @@ typedef struct physpoint {
 std::complex<double> GetTransferFuncVal(
 	const double theta_step,
 	const int theta_NM, 
-	double freq,                    // [Hz]
-	std::vector<double> &fermat_pot, // [s]
+	const double freq,                    // [Hz]
+	const std::vector<double> &fermat_pot, // [s]
 	const double geom_factor // [1/s]
 );
 
@@ -34,8 +37,8 @@ std::complex<double> GetGravTransferFuncVal(
 	const double theta_step,
 	const int theta_NM, 
 	const double theta_min,
-	double freq,
-	std::vector<double> &fermat_pot,
+	const double freq,
+	const std::vector<double> &fermat_pot,
     const double geom_factor,
 	const double eins,
 	const double mass,
@@ -44,10 +47,12 @@ std::complex<double> GetGravTransferFuncVal(
 );
 
 void GetFreqImage(
+	const double theta_step,        
 	const int theta_NM,
-	const int freqind,             
-	std::vector<double> &fermat_pot, // [s]		
-    std::vector<imagepoint> &freq_images
+	const int freqind,
+	const std::vector<double> &fermat_pot, // [s]
+    std::vector<imagepoint> &freq_images,
+    const double geom_factor
 ); 
 
 std::complex<double> GetMag(
@@ -55,7 +60,7 @@ std::complex<double> GetMag(
 	const int jtheta,
 	const int theta_NM,
 	const double theta_step, 
-	std::vector<double> &fermat_pot,
+	const std::vector<double> &fermat_pot,
     const double geom_factor
 );
 
@@ -63,7 +68,7 @@ bool IsStationary(
 	const int itheta,
 	const int jtheta,
 	const int theta_NM,
-	std::vector<double> &fermat_pot
+	const std::vector<double> &fermat_pot
 ); 
 
 void SetGeometricDelayArr(
@@ -76,14 +81,18 @@ void SetGeometricDelayArr(
 );
 
 void SetFermatPotential(
-	double geom_factor,
-	double lens_factor,
-	std::vector<double> &geom_arr,
-	std::vector<double> &lens_arr,
+	const double geom_factor,
+	const double lens_factor,
+    const int theta_NM,
+    const double freq,    
+	const std::vector<double> &geom_arr,
+	const std::vector<double> &lens_arr,
 	std::vector<double> &fermat_pot 
 );
 
-int Sign(double val);
+int Sign(const double val);
+
+bool StatCellCheck(const double a, const double b); 
 
 physpoint map_grav_p(
 	const physpoint srcpos,
@@ -106,3 +115,4 @@ double grav_delayval(
 	const double eins,
 	const double mass
 );
+
