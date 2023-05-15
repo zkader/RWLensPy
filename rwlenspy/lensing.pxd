@@ -10,6 +10,8 @@ cdef extern from "rwlens.h":
         int xind
         int yind
         int find
+        double delay
+        double complex mag
 
     cdef struct physpoint: 
         double valx
@@ -41,10 +43,10 @@ cdef extern from "rwlens.h":
         double beta_x,
         double beta_y) nogil
 
-    void GetFreqImage(int theta_NM, int freqind,\
+    void GetFreqImage(double theta_step,int theta_NM, int freqind,\
                       vector[double] &fermat_pot,\
-                      vector[imagepoint] &freq_images) nogil
-
+                      vector[imagepoint] &freq_images, double geom_factor) nogil
+    
     double complex GetMag(int itheta, int jtheta, int theta_NM,\
                           double theta_step, vector[double]& fermat_pot,\
                           double geom_factor) nogil

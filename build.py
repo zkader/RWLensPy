@@ -23,7 +23,7 @@ else:
             "rwlenspy.lensing",
             ["rwlenspy/lensing.pyx"],
             include_dirs = ['rwlenspy/.'],
-            extra_compile_args=['-fopenmp','-ffast-math','-std=c++11'],
+            extra_compile_args=['-fopenmp','-std=c++11'],
             extra_link_args=['-fopenmp'],)
         ]
         

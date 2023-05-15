@@ -92,7 +92,7 @@ std::complex<double> GetMag(
 	const int theta_NM,
 	const double theta_step, 
 	const std::vector<double> &fermat_pot,
-    const double geom_factor
+        const double geom_factor
 );
 
 std::complex<double> GetMag(

@@ -13,6 +13,8 @@ cimport openmp
 
 np.import_array()
 
+cdef double PI_ = 3.14159265358979323846
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef np.ndarray[np.double_t, ndim=2] GetPoints(double muMin,
@@ -87,31 +89,35 @@ cpdef vector[complex] RunPlasmaTransferFunc(vector[double] geom_arr,
                                        int theta_N,
                                        double beta_x,
                                        double beta_y,
-                                       double freq_min,
-                                       double freq_max,
-                                       int freq_N,
+                                       vector[double] freq_arr,
                                        double geom_const,
-                                       double lens_const
-                                       ):
+                                       double lens_const,
+                                       double freq_power,
+                                        ):
     # T(theta) = geom_const*geom_arr(theta,beta) + lens_const*freq^-2*lens_arr(theta)
+    cdef int freq_N = freq_arr.size()    
+    
     cdef vector[complex] tfunc = vector[complex](freq_N)
     cdef vector[double] fermat_pot
     
     cdef int freq_ii
     cdef double theta_step, freq_step, freq_val
     cdef double lens_factor
-
+    cdef double mag_norm = geom_const
+    
     theta_step = (theta_max - theta_min) /  (theta_N - 1)
-    freq_step = (freq_max - freq_min) /  (freq_N - 1)
+    #freq_step = (freq_max - freq_min) /  (freq_N - 1)
 
     with nogil, parallel():
         for freq_ii in prange(freq_N):
-            freq_val = freq_step * freq_ii + freq_min
+            freq_val = freq_arr[freq_ii]            
             fermat_pot = vector[double](theta_N*theta_N)
-            lens_factor = lens_const / (freq_val * freq_val)
+            lens_factor = lens_const * freq_val**freq_power
 
+            #mag_norm = 2.0 * PI_ * freq_val * geom_const
+            
             SetFermatPotential(geom_const, lens_factor, theta_N, freq_val, geom_arr, lens_arr, fermat_pot)
-            tfunc[freq_ii] = GetTransferFuncVal(theta_step, theta_N, freq_val, fermat_pot, geom_const)
+            tfunc[freq_ii] = GetTransferFuncVal(theta_step, theta_N, freq_val, fermat_pot, mag_norm)
 
     return tfunc
 
@@ -120,13 +126,12 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(vector[double] geom_arr,
                                        double theta_min,
                                        double theta_max,
                                        int theta_N,
-                                       double beta_x,
-                                       double beta_y,
                                        double freq_min,
                                        double freq_max,
                                        int freq_N,
                                        double geom_const,
                                        double lens_const,
+                                       double freq_power,
                                        double eins,
                                        double mass,
                                        double betaE_x,
@@ -140,7 +145,8 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(vector[double] geom_arr,
     cdef int freq_ii
     cdef double theta_step, freq_step, freq_val
     cdef double lens_factor
-
+    cdef double mag_norm = geom_const
+    
     theta_step = (theta_max - theta_min) /  (theta_N - 1)
     freq_step = (freq_max - freq_min) /  (freq_N - 1)				       
 
@@ -148,11 +154,12 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(vector[double] geom_arr,
         for freq_ii in prange(freq_N):
             freq_val = freq_step * freq_ii + freq_min
             fermat_pot = vector[double](theta_N*theta_N)
-            lens_factor = lens_const / (freq_val * freq_val)
+            lens_factor = lens_const * freq_val**freq_power
+            #mag_norm = 2.0 * PI_ * freq_val * geom_const
 
             SetFermatPotential(geom_const, lens_factor, theta_N, freq_val, geom_arr, lens_arr, fermat_pot)
             tfunc[freq_ii] = GetGravTransferFuncVal(theta_step, theta_N, theta_min,\
-                                                   freq_val, fermat_pot, geom_const,\
+                                                   freq_val, fermat_pot, mag_norm,\
                                                    eins, mass, betaE_x, betaE_y)
 
     return tfunc
@@ -162,63 +169,54 @@ cpdef GetFreqStationaryPoints(vector[double] geom_arr,
                                        double theta_min,
                                        double theta_max,
                                        int theta_N,
-                                       double beta_x,
-                                       double beta_y,
-                                       double freq_min,
-                                       double freq_max,
-                                       int freq_N,
+                                       vector[double] freq_arr,
+                                       #double freq_min,
+                                       #double freq_max,
+                                       #int freq_N,
                                        double geom_const,
-                                       double lens_const
+                                       double lens_const,
+                                       double freq_power
                                        ):
     # T(theta) = geom_const*geom_arr(theta,beta) + lens_const*freq^-2*lens_arr(theta)
     #cdef vector[complex] tfunc = vector[complex](freq_N)
+    cdef int freq_N = freq_arr.size()
+    
     cdef vector[double] fermat_pot
     cdef vector[vector[imagepoint]] freqpnts = vector[vector[imagepoint]](freq_N)
     
     cdef int freq_ii, thrid
     cdef double theta_step, freq_step, freq_val
     cdef double lens_factor
+    cdef double mag_norm = geom_const
 
     theta_step = (theta_max - theta_min) /  (theta_N - 1)
-    freq_step = (freq_max - freq_min) /  (freq_N - 1)
+    #freq_step = (freq_max - freq_min) /  (freq_N - 1)
 
     #freqpnts.resize(openmp.omp_get_max_threads())
     with nogil, parallel():
         for freq_ii in prange(freq_N):
             #thrid = threadid()
 
-            freq_val = freq_step * freq_ii + freq_min
+            #freq_val = freq_step *freq_ii + freq_min
+            freq_val = freq_arr[freq_ii]            
             fermat_pot = vector[double](theta_N*theta_N)
-            lens_factor = lens_const / (freq_val * freq_val)
+            lens_factor = lens_const * freq_val**freq_power
+
+            #mag_norm = 2.0 * PI_ * freq_val * geom_const
+            
 
             SetFermatPotential(geom_const, lens_factor, theta_N, freq_val, geom_arr, lens_arr, fermat_pot)
-            GetFreqImage(theta_N, freq_ii, fermat_pot, freqpnts[freq_ii])
+            GetFreqImage(theta_step, theta_N, freq_ii, fermat_pot, freqpnts[freq_ii], mag_norm)
 
-    cdef vector[int] testa,testb,testc
+    cdef vector[int] thetax_inds,thetay_inds,freq_inds
+    cdef vector[complex] magarr
+    cdef vector[double] delayarr
     
-    testa,testb,testc = ConvertFreqStatPnts(freqpnts,
-                                            geom_arr,
-                                            lens_arr,
-                                            theta_min,
-                                            theta_N,
-                                            freq_min,
-                                            freq_N,
-                                            geom_const,
-                                            lens_const)
+    thetax_inds,thetay_inds,freq_inds,delayarr,magarr = ConvertFreqStatPnts(freqpnts)
 
-    return testa,testb,testc
+    return thetax_inds,thetay_inds,freq_inds,delayarr,magarr
 
-cpdef ConvertFreqStatPnts(
-                     vector[vector[imagepoint]] freqpnts,
-		     vector[double] geom_arr,
-                     vector[double] lens_arr,
-                     double theta_min,
-                     int theta_N,
-                     double freq_min,
-                     int freq_N,
-                     double geom_const,
-                     double lens_const
-):
+cpdef ConvertFreqStatPnts(vector[vector[imagepoint]] freqpnts):
 
     cdef int iteri, iterj
     cdef int Npnts = freqpnts.size()
@@ -226,6 +224,8 @@ cpdef ConvertFreqStatPnts(
     cdef vector[imagepoint] temppnts
     cdef imagepoint tempimgpnt
     cdef vector[int] xindsv,yindsv,findsv
+    cdef vector[complex] magv
+    cdef vector[double] delayv
 
     for iteri in range(Npnts):
         temppnts = freqpnts[iteri]
@@ -235,5 +235,7 @@ cpdef ConvertFreqStatPnts(
             xindsv.push_back(tempimgpnt.xind)
             yindsv.push_back(tempimgpnt.yind)
             findsv.push_back(tempimgpnt.find)
-
-    return xindsv,yindsv,findsv
+            delayv.push_back(tempimgpnt.delay)
+            magv.push_back(tempimgpnt.mag)
+            
+    return xindsv,yindsv,findsv,delayv,magv

@@ -7,9 +7,8 @@ std::complex<double> GetTransferFuncVal(
 	const std::vector<double> &fermat_pot,
     const double mag_norm)
 {
-	std::complex<double> tfunc_val = 0.0 + I*0.0;   
-	
-	for(int itheta = 2; itheta < theta_NM - 2; itheta++) 
+    std::complex<double> tfunc_val = 0.0 + I*0.0;    
+    for(int itheta = 2; itheta < theta_NM - 2; itheta++)
     {
         for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
         {

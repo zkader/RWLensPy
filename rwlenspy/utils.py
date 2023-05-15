@@ -178,8 +178,9 @@ def GetStatPnt(fermat_pot,i,j):
     F_bx = F_cntr - fermat_pot[i - 1,j]
     F_by = F_cntr - fermat_pot[i,j - 1]
 
-    if ((np.sign(F_fx) * np.sign(F_bx)  < 0) * (np.sign(F_fy) * np.sign(F_by) < 0))\
-       | ( F_fx + F_bx + F_fy + F_by == 0):
+    #if ((np.sign(F_fx) * np.sign(F_bx)  < 0) * (np.sign(F_fy) * np.sign(F_by) < 0))\
+    #   | ( F_fx + F_bx + F_fy + F_by == 0):
+    if ((np.sign(F_fx) * np.sign(F_bx)  < 0) * (np.sign(F_fy) * np.sign(F_by) < 0)):
         return True
     else:
         return False
@@ -230,7 +231,7 @@ def PntMagVal(xinds,
              ):
     
         def _fermat_pot(xi,yi):
-            return geom_const*geom_arr[yi + theta_N*xi ] + lens_const*fvals**(-2) * lens_arr[yi + theta_N*xi]            
+            return geom_const*geom_arr[yi + theta_N*xi ] + lens_const*freqvals**(-2) * lens_arr[yi + theta_N*xi]            
                 
         fxx = ( -_fermat_pot(xinds+2,yinds)
                         +16.0*_fermat_pot(xinds+1,yinds)
@@ -263,3 +264,66 @@ def PntMagVal(xinds,
             magval[magval != 0.0+0j] = 1/np.sqrt(magval[magval != 0.0+0j])
 
             return magval * geom_const
+
+def AnalyticPntMassGrav(mass, y):
+    time_c = 0.5*y*np.sqrt(y*y +4) + np.log((np.sqrt(y*y +4) + y) / (np.sqrt(y*y +4) - y))
+    
+    time_c = (4*c.G*c.M_sun/c.c**3).to(u.s).value*time_c*mass
+    
+    mag_c = (y*y + 2 + y*np.sqrt(y*y +4))/(y*y + 2 - y*np.sqrt(y*y +4))
+    
+    return time_c, np.sqrt(1/mag_c)
+
+def AnalyticGaussPlasma(y, geo_par, lens_par, freqvals,xm=10, N=20001):
+    """     
+    """ 
+    xvv = np.linspace(-xm,xm,N) # in lens scale units
+        
+    # stationary point func
+    lensgrad = lambda x,mu:  x * (1 - mu * np.exp(-0.5*x*x)) 
+    
+    # lens delay func
+    lensdel = lambda x,y,mu1,mu2: mu1 * 0.5*(x-y)**2 + mu2 *np.exp(-0.5*x*x)      
+
+    # lens mag func
+    lensmag = lambda x,mu:  ((1 + 0*1j - mu * np.exp(-0.5*x*x)) * (1 - mu * np.exp(-0.5*x*x) * (1 - x*x) ))**(-0.5) 
+
+    #r_e = c.alpha**2 * c.a0 # classical electron radius
+    #plasma_const = r_e * c.c  /( 2 * np.pi * ((400* u.MHz ).to(1/u.s))**2)
+    #plasma_const = plasma_const.to(u.pc**-1*u.cm**3 * u.s)    
+    #DMc = 1* u.pc *u.cm**-3 
+    #plasma_time_factor = (plasma_const * DMc ).to(u.s)
+    #plasma_time_factor = plasma_time_factor * dm0
+    
+    #freqsvv = np.linspace(800,400,1025)*1e6 * u.Hz
+    #freqsvv = (800e6 - rfftfreq(2048,d=1/800e6)[:-1]) #* u.Hz
+
+    #timeconst = (r_e * c.c *DM_0  /( 2 * np.pi * ((freqsvv).to(1/u.s))**2) ).to(u.s)
+    #theta_plasmavv = np.sqrt( timeconst * c.c * const_r2 ).to(u.m/u.m)    
+    #tf = p_scale / theta_plasmavv  
+
+    freqvv = np.array([])
+    xposvv = np.array([])
+    i_delvv = np.array([])
+    i_magvv = np.array([])
+    for ii,tfi in enumerate(freqvals):
+        mu_geom = geo_par
+        mu_lens = lens_par / tfi**2
+
+        mu_ = mu_lens / mu_geom
+        
+        idx = np.argwhere(np.diff(\
+                                  np.sign(lensgrad(xvv,mu_) \
+                                          - y \
+                                         ))).flatten()
+
+        freqvv = np.append(freqvv,freqvals[ii]*np.ones(idx.size))
+        
+        xposvv = np.append(xposvv,xvv[idx])
+        
+        i_delvv = np.append(i_delvv, lensdel(xvv[idx],y,mu_geom,mu_lens))
+        
+        i_magvv = np.append(i_magvv,lensmag(xvv[idx],mu_))
+        
+        
+    return freqvv,xposvv,i_delvv,i_magvv
