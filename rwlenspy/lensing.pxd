@@ -11,10 +11,23 @@ cdef extern from "rwlens.h":
         int yind
         int find
 
+    cdef struct physpoint: 
+        double valx
+        double valy
+
     double complex GetTransferFuncVal(\
                    double theta_step, int theta_NM,\
                    double freq, vector[double]& fermat_pot,\
                    double geom_factor) nogil
+
+    double complex GetTransferFuncVal(\
+    double theta_step, int theta_NM, \
+    double theta_min, double freq, \
+    vector[double]& lens_arr, \
+    vector[physpoint]& dlens_arr, \
+    vector[physpoint]& ddlens_arr, \
+    double geom_fac, double lens_fac, \
+    physpoint betav) nogil
 
     double complex GetGravTransferFuncVal(
 	double theta_step,
@@ -44,3 +57,7 @@ cdef extern from "rwlens.h":
     void SetFermatPotential(double time_scale, double theta_scale, \
                             vector[double]& geom_arr, vector[double]& lens_arr,\
                             vector[double]& fermat_pot) nogil
+
+    void SetGradientArrs( int theta_NM, double theta_step,    \
+                        vector[double]& lens_arr, vector[physpoint]& dlens_arr, \
+                        vector[physpoint]& ddlens_arr)
