@@ -13,10 +13,23 @@ cdef extern from "rwlens.h":
         double delay
         double complex mag
 
+    cdef struct physpoint: 
+        double valx
+        double valy
+
     double complex GetTransferFuncVal(\
                    double theta_step, int theta_NM,\
                    double freq, vector[double]& fermat_pot,\
                    double geom_factor) nogil
+
+    double complex GetTransferFuncVal(\
+    double theta_step, int theta_NM, \
+    double theta_min, double freq, \
+    vector[double]& lens_arr, \
+    vector[physpoint]& dlens_arr, \
+    vector[physpoint]& ddlens_arr, \
+    double geom_fac, double lens_fac, \
+    physpoint betav) nogil
 
     double complex GetGravTransferFuncVal(
 	double theta_step,
@@ -43,6 +56,11 @@ cdef extern from "rwlens.h":
     void SetGeometricDelayArr(double theta_min, double theta_max, int theta_NM, \
                              double beta_x, double beta_y, vector[double]& geom_arr) nogil
 
-    void SetFermatPotential(double time_scale, double theta_scale, \
-                            int theta_NM, double freq, vector[double]& geom_arr,
-                            vector[double]& lens_arr, vector[double]& fermat_pot) nogil
+    void SetFermatPotential(double geom_factor, double lens_factor, \
+                            int theta_NM, double freq,\
+                            vector[double]& geom_arr, vector[double]& lens_arr,\
+                            vector[double]& fermat_pot) nogil
+
+    void SetGradientArrs( int theta_NM, double theta_step,    \
+                        vector[double]& lens_arr, vector[physpoint]& dlens_arr, \
+                        vector[physpoint]& ddlens_arr)

@@ -7,7 +7,7 @@ std::complex<double> GetTransferFuncVal(
 	const std::vector<double> &fermat_pot,
     const double mag_norm)
 {
-	std::complex<double> tfunc_val = 0.0 + I*0.0;    
+    std::complex<double> tfunc_val = 0.0 + I*0.0;    
     for(int itheta = 2; itheta < theta_NM - 2; itheta++)
     {
         for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
@@ -38,6 +38,46 @@ std::complex<double> GetTransferFuncVal(
     return tfunc_val;
 } 
 
+std::complex<double> GetTransferFuncVal(
+	const double theta_step,
+	const int theta_NM, 
+	const double theta_min,		
+	const double freq,
+	const std::vector<double> &lens_arr,
+	const std::vector<physpoint> &dlens_arr,
+	const std::vector<physpoint> &ddlens_arr,	
+    const double geom_fac,    
+    const double lens_fac,
+	const physpoint betav
+	)
+{
+	std::complex<double> tfunc_val = 0.0 + I*0.0;    
+    double lens_param = lens_fac / geom_fac ;
+    
+	for(int itheta = 2; itheta < theta_NM - 2; itheta++) 
+    {
+        for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
+        {
+			if( IsStationary( itheta, jtheta, theta_NM,
+							theta_step, theta_min,	
+							dlens_arr, lens_param, betav )){
+				double theta_x = theta_step * itheta + theta_min;				    			
+				double theta_y = theta_step * jtheta + theta_min;					
+					
+				double geomdelay =  geom_fac*0.5*( pow( theta_x - betav.valx ,2.0) + pow( theta_y - betav.valy ,2.0));
+				
+				double phase = 2 * pi * freq * (geomdelay + lens_fac * lens_arr[jtheta + theta_NM * itheta] );
+			
+				std::complex<double> mag = GetMag(itheta, jtheta, theta_NM, ddlens_arr, lens_param);
+				
+                std::complex<double> tempval = mag*std::complex<double>( cos(phase), sin(phase));       
+				tfunc_val += tempval;				
+			}
+        }
+    }
+    return tfunc_val;
+} 
+
 std::complex<double> GetGravTransferFuncVal(
 	const double theta_step,
 	const int theta_NM, 
@@ -53,10 +93,11 @@ std::complex<double> GetGravTransferFuncVal(
 {
 	std::complex<double> tfunc_val = 0.0 + I*0.0;
 	
+	
     for(int itheta = 2; itheta < theta_NM - 2; itheta++)
-    {
+    {		
         for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
-        {
+        {        	
 			if( IsStationary(itheta, jtheta, theta_NM, fermat_pot) )
 			{
 				double imgphase,phase;
@@ -66,8 +107,8 @@ std::complex<double> GetGravTransferFuncVal(
 				mag = GetMag(itheta, jtheta, theta_NM, theta_step, fermat_pot, mag_norm);				
 				phase = 2 * pi * freq * fermat_pot[jtheta + theta_NM * itheta];
 				
-				sourcepos.thetax = theta_min + theta_step * itheta + beta_x;				
-				sourcepos.thetay = theta_min + theta_step * jtheta + beta_y;
+				sourcepos.valx = theta_min + theta_step * itheta + beta_x;				
+				sourcepos.valy = theta_min + theta_step * jtheta + beta_y;
 
 				imagepos = map_grav_p(sourcepos, eins);
 				imgmag = grav_magval(imagepos, eins);
@@ -117,7 +158,12 @@ void GetFreqImage(
 bool IsStationary(const int itheta, const int jtheta, const int theta_NM, const std::vector<double> &fermat_pot) 
 {
 	double F_cntr = fermat_pot[jtheta + theta_NM * itheta];
-    if(std::isinf(F_cntr)){return false;}
+    if(std::isinf(F_cntr) 
+	|| std::isinf(fermat_pot[jtheta + 1 + theta_NM * itheta])
+	|| std::isinf(fermat_pot[jtheta - 1 + theta_NM * itheta])
+	|| std::isinf(fermat_pot[jtheta + theta_NM * (itheta + 1)])
+	|| std::isinf(fermat_pot[jtheta + theta_NM * (itheta + 1)])   ){return false;}
+
     
     // central difference
 	double F_cntr_dy = fermat_pot[jtheta  + theta_NM * (itheta + 1)] - fermat_pot[jtheta  + theta_NM * (itheta - 1)];
@@ -170,6 +216,53 @@ bool IsStationary(const int itheta, const int jtheta, const int theta_NM, const 
 
 }
 
+bool IsStationary(
+	const int itheta,
+	const int jtheta,
+	const int theta_NM,
+	const double theta_step,
+	const double theta_min,	
+	const std::vector<physpoint> &dlens_arr,
+    const double lens_param,    
+	const physpoint betav ) 
+{
+	physpoint pnt_cntr = dlens_arr[jtheta + theta_NM * itheta];
+    if(std::isinf(pnt_cntr.valx) || std::isinf(pnt_cntr.valy) ) {return false;}
+	
+	double fx_cntr = theta_step * jtheta + theta_min + lens_param * pnt_cntr.valx;
+	double fy_cntr = theta_step * itheta + theta_min + lens_param * pnt_cntr.valy;	
+	
+	if((betav.valx == fx_cntr) && (betav.valy == fy_cntr)){return true;}	
+    	
+	physpoint pnt_left = dlens_arr[jtheta - 1 + theta_NM * itheta];	
+    if(std::isinf(pnt_left.valx) || std::isinf(pnt_left.valy) ) {return false;}
+   	    
+	physpoint pnt_right = dlens_arr[jtheta + 1 + theta_NM * itheta];
+    if(std::isinf(pnt_right.valx) || std::isinf(pnt_right.valy) ) {return false;}
+	
+	double fx_left = theta_step * (jtheta - 1) + theta_min + lens_param * pnt_left.valx;	
+	double fx_right = theta_step * (jtheta + 1) + theta_min + lens_param * pnt_right.valx;
+
+	if( CellCheck(fx_left, fx_cntr, fx_right, betav.valx))
+	{
+		physpoint pnt_up = dlens_arr[jtheta + theta_NM * (itheta - 1)];
+	    if(std::isinf(pnt_up.valx) || std::isinf(pnt_up.valy) ) {return false;}
+		
+		physpoint pnt_down = dlens_arr[jtheta + theta_NM * (itheta + 1 )];
+	    if(std::isinf(pnt_down.valx) || std::isinf(pnt_down.valy) ) {return false;}		
+	
+		double fy_up = theta_step * (itheta - 1) + theta_min + lens_param * pnt_up.valy;	
+		double fy_down = theta_step * (itheta + 1) + theta_min + lens_param * pnt_down.valy;
+	
+		if( CellCheck(fy_up, fy_cntr, fy_down, betav.valy)){
+			return true;
+		}		
+	}else
+	{
+		return false;
+	}
+}
+
 std::complex<double> GetMag(const int itheta, const int jtheta, const int theta_NM, const double theta_step, const std::vector<double> &fermat_pot, const double geom_factor)
 {
 	std::complex<double> magval, fxx,fxy,fyy;	
@@ -202,8 +295,9 @@ std::complex<double> GetMag(const int itheta, const int jtheta, const int theta_
 	//fxx = (fermat_pot[jtheta + theta_NM * (itheta+1)] - 2*fermat_pot[jtheta + theta_NM * itheta] + fermat_pot[jtheta + theta_NM * (itheta-1)])/(theta_step * theta_step) ;
 	//fyy = (fermat_pot[(jtheta+1) + theta_NM * itheta] - 2*fermat_pot[jtheta + theta_NM * itheta] + fermat_pot[(jtheta-1) + theta_NM * itheta])/(theta_step * theta_step) ;	
 	//fxy = (fermat_pot[(jtheta+1) + theta_NM * (itheta+1)] - fermat_pot[(jtheta+1) + theta_NM * (itheta-1)] - fermat_pot[(jtheta-1) + theta_NM * (itheta+1)] + fermat_pot[(jtheta-1) + theta_NM * (itheta-1)])/( 4.0*theta_step * theta_step) ;
-		
-	magval = fxx*fyy - fxy*fxy;	
+	
+	magval += fxx*fyy - fxy*fxy ;			
+	
 	if(magval == 0.0 + I*0.0 )
 		{
 			return 0.0+I*0.0;
@@ -212,6 +306,27 @@ std::complex<double> GetMag(const int itheta, const int jtheta, const int theta_
 	{
 		magval = pow(magval,-0.5);
 		magval *= geom_factor; // normalization to unlensed case 
+		return magval;	
+	}
+}
+
+std::complex<double> GetMag(const int itheta, const int jtheta, const int theta_NM, const std::vector<physpoint> &mag_arr, const double lens_param)
+{
+	std::complex<double> magval;	
+	
+	physpoint maghess = mag_arr[jtheta + theta_NM * itheta];
+	
+	//                                            Det(Hess)                   Tr(Hess)
+	magval = 1.+I*0.0 + lens_param * lens_param * maghess.valy + lens_param * maghess.valx ; 
+	
+	if(magval == 0.0 + I*0.0 )
+		{
+			std::cout << "Warning: No curvature / Caustic at " << itheta << "," << jtheta <<"\n" ;			
+			return 0.0+I*0.0;
+		}
+	else
+	{
+		magval = pow(magval,-0.5);
 		return magval;	
 	}
 }
@@ -262,6 +377,75 @@ void SetFermatPotential(
     }
 } 
 
+void SetGradientArrs(
+    const int theta_NM,
+    const double theta_step,    
+	const std::vector<double> &lens_arr,
+	std::vector<physpoint> &dlens_arr ,
+	std::vector<physpoint> &ddlens_arr 	
+){  
+	assert ( lens_arr.size() == dlens_arr.size());
+	assert ( lens_arr.size() == theta_NM*theta_NM);
+	    
+	// points lost for hessian
+    for(int itheta = 2; itheta < theta_NM - 2; itheta++)
+    {
+        for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
+        {
+            int arr_ind = jtheta + theta_NM * itheta;
+            
+		    // central difference
+			double Ldy = (lens_arr[jtheta  + theta_NM * (itheta + 1)] - lens_arr[jtheta  + theta_NM * (itheta - 1)]
+						)/ (2.0 * theta_step);
+			double Ldx = (lens_arr[(jtheta + 1) + theta_NM * itheta] - lens_arr[(jtheta - 1) + theta_NM * itheta]
+						)/ (2.0 * theta_step);
+						
+			physpoint gradpnt;
+			
+			gradpnt.valx = Ldx;
+			gradpnt.valy = Ldy;			
+			
+            dlens_arr[arr_ind] = gradpnt;            
+            
+            // Hessian
+            double fyy = ( -lens_arr[(jtheta) + theta_NM * (itheta+2)]
+				+16.0*lens_arr[(jtheta) + theta_NM * (itheta+1)]
+				-30.0*lens_arr[(jtheta) + theta_NM * (itheta)]
+				+16.0*lens_arr[(jtheta) + theta_NM * (itheta-1)]
+				-lens_arr[(jtheta) + theta_NM * (itheta-2)]	
+				)/ (12.0 * theta_step * theta_step);
+
+			double fxx = ( -lens_arr[(jtheta+2) + theta_NM * (itheta)]
+				+16.0*lens_arr[(jtheta+1) + theta_NM * (itheta)]
+				-30.0*lens_arr[(jtheta) + theta_NM * (itheta)]
+				+16.0*lens_arr[(jtheta-1) + theta_NM * (itheta)]
+				-lens_arr[(jtheta-2) + theta_NM * (itheta)]	
+				)/ (12.0 * theta_step * theta_step);
+
+			double fxy = ( -lens_arr[(jtheta+2) + theta_NM * (itheta+2)]
+				+lens_arr[(jtheta-2) + theta_NM * (itheta+2)]
+				+lens_arr[(jtheta+2) + theta_NM * (itheta-2)]
+				-lens_arr[(jtheta-2) + theta_NM * (itheta-2)]	
+				+16.0*lens_arr[(jtheta+1) + theta_NM * (itheta+1)]
+				-16.0*lens_arr[(jtheta-1) + theta_NM * (itheta+1)]
+				-16.0*lens_arr[(jtheta+1) + theta_NM * (itheta-1)]
+				+16.0*lens_arr[(jtheta-1) + theta_NM * (itheta-1)]
+			)/ (48.0 * theta_step * theta_step);
+            
+            
+            physpoint magpnt;
+			
+			// Trace of Hessian
+			magpnt.valx = fxx + fyy;
+			
+			// Determinant of Hessian
+			magpnt.valy = fxx*fyy - fxy*fxy;			
+			
+            ddlens_arr[arr_ind] = magpnt;                
+        }
+    }	
+}
+
 int Sign(const double val){
 	return (val > 0) - (val < 0);
 }
@@ -274,31 +458,52 @@ bool StatCellCheck(const double a, const double b){
     }    
 }
 
+bool IVPCheck(const double fa, const double fc, const double fb){
+	// f(a) <= fc < f(b) ?
+    if((fc > fa) && (fc < fb) )
+	{
+    	return true;
+    }else{
+        return false;        
+    }    
+}	
+
+bool CellCheck(const double left, const double center, const double right, const double val){
+	// check if in cell and put to nearest neighbour
+	// IVP function bounds  and closest neighbour is grid point
+    if( (IVPCheck(left,val,center) && (fabs(center - val) <  fabs(left - val) )) 
+	 || (IVPCheck(center,val,right) && (fabs(center - val) <  fabs(right - val) )) )
+	{
+    	return true;
+	}else{
+		return false;
+	}
+}
 
 physpoint map_grav_p(const physpoint srcpos, const double eins){
-    double ang = fmod( atan2(srcpos.thetay, srcpos.thetax) + 2 * pi, 2 * pi);
-    double norm = sqrt( srcpos.thetax*srcpos.thetax + srcpos.thetay * srcpos.thetay);
+    double ang = fmod( atan2(srcpos.valy, srcpos.valx) + 2 * pi, 2 * pi);
+    double norm = sqrt( srcpos.valx*srcpos.valx + srcpos.valy * srcpos.valy);
     double mag = 0.5 * ( norm + sqrt(norm*norm + 4 * eins * eins ) );    
 	physpoint imgpos;
-	imgpos.thetax = mag*cos(ang);
-	imgpos.thetay = mag*sin(ang);
+	imgpos.valx = mag*cos(ang);
+	imgpos.valy = mag*sin(ang);
 
     return imgpos;
 }
 
 physpoint map_grav_m(const physpoint srcpos, const double eins){
-    double ang = fmod( atan2(srcpos.thetay, srcpos.thetax) + 2 * pi, 2 * pi);
-    double norm = sqrt( srcpos.thetax*srcpos.thetax + srcpos.thetay * srcpos.thetay);
+    double ang = fmod( atan2(srcpos.valy, srcpos.valx) + 2 * pi, 2 * pi);
+    double norm = sqrt( srcpos.valx*srcpos.valx + srcpos.valy * srcpos.valy);
     double mag = 0.5 * ( norm - sqrt(norm*norm + 4 * eins * eins ) );    
 	physpoint imgpos;
-	imgpos.thetax = mag*cos(ang);
-	imgpos.thetay = mag*sin(ang);
+	imgpos.valx = mag*cos(ang);
+	imgpos.valy = mag*sin(ang);
 
     return imgpos;
 }
 
 std::complex<double> grav_magval(const physpoint imgpos, const double eins){
-	double norm = sqrt( imgpos.thetax*imgpos.thetax + imgpos.thetay * imgpos.thetay);
+	double norm = sqrt( imgpos.valx*imgpos.valx + imgpos.valy * imgpos.valy);
 
     if(norm == 0)
     {
@@ -315,11 +520,11 @@ std::complex<double> grav_magval(const physpoint imgpos, const double eins){
 double grav_delayval(const physpoint imgpos,const physpoint srcpos,const double eins,const double mass){
     double Eins_time_const =  1.970196379056507E-05;//4*G*M_sun/c^3 in s/M_sun
     
-    double rnorm = sqrt( (imgpos.thetax - srcpos.thetax)*(imgpos.thetax - srcpos.thetax) \
-	                   + (imgpos.thetay - srcpos.thetay)*(imgpos.thetay - srcpos.thetay) )/eins;
+    double rnorm = sqrt( (imgpos.valx - srcpos.valx)*(imgpos.valx - srcpos.valx) \
+	                   + (imgpos.valy - srcpos.valy)*(imgpos.valy - srcpos.valy) )/eins;
 	                   
-    double inorm = sqrt( imgpos.thetax*imgpos.thetax \
-	                   + imgpos.thetay*imgpos.thetay )/eins;
+    double inorm = sqrt( imgpos.valx*imgpos.valx \
+	                   + imgpos.valy*imgpos.valy )/eins;
 
     return Eins_time_const*mass*(0.5*rnorm*rnorm - log(inorm) );
 }
