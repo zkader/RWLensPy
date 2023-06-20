@@ -3,56 +3,21 @@
 std::complex<double> GetTransferFuncVal(
 	const double theta_step,
 	const int theta_NM, 
-	const double freq,
-	const std::vector<double> &fermat_pot,
-    const double mag_norm)
-{
-    std::complex<double> tfunc_val = 0.0 + I*0.0;    
-    for(int itheta = 2; itheta < theta_NM - 2; itheta++)
-    {
-        for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
-        {
-			if( IsStationary(itheta, jtheta, theta_NM, fermat_pot) )
-			{
-                //bool b_up = IsStationary(itheta + 1, jtheta, theta_NM, fermat_pot) ;
-                //bool b_down = IsStationary(itheta - 1, jtheta, theta_NM, fermat_pot) ;
-                //bool b_left = IsStationary(itheta, jtheta-1, theta_NM, fermat_pot) ;
-                //bool b_right = IsStationary(itheta, jtheta+1, theta_NM, fermat_pot) ;
-                
-                //if 
-				double phase = 2 * pi * freq * fermat_pot[jtheta + theta_NM * itheta] ;
-                
-				std::complex<double> mag = GetMag(itheta, jtheta, theta_NM, theta_step, fermat_pot, mag_norm);
-				//std::cout << "Stationary i,j: " << itheta << "," << jtheta << "| freq: " << freq <<"\n" ;
-				//std::cout << "Stationary mag: " << mag << "| freq: " << freq <<"\n" ;
-				//std::cout << "Stationary delay: " << fermat_pot[jtheta + theta_NM * itheta] << "| freq: " << freq <<"\n"  ;				
-				//std::cout << "Stationary delay: " << fermat_pot[jtheta + theta_NM * itheta] << "| freq: " << freq <<"\n"  ;				                
-                //phase = fmod( phase, 2 * pi);
-				//std::cout << "Stationary delay: " << fermat_pot[jtheta + theta_NM * itheta] << "| freq: " << freq <<"\n" 
-                std::complex<double> tempval = mag*std::complex<double>( cos(phase), sin(phase));       
-				tfunc_val += tempval;
-				//std::cout << "Stationary tfunc: " << phase << "| freq: " << freq  <<"\n" ;								
-			}
-        }
-    }		
-    return tfunc_val;
-} 
-
-std::complex<double> GetTransferFuncVal(
-	const double theta_step,
-	const int theta_NM, 
 	const double theta_min,		
 	const double freq,
+	const double freq_ref,    
+	const double freq_power,        
 	const std::vector<double> &lens_arr,
 	const std::vector<physpoint> &dlens_arr,
-	const std::vector<physpoint> &ddlens_arr,	
+	const std::vector<physpoint> &ddlens_arr,
     const double geom_fac,    
     const double lens_fac,
 	const physpoint betav
 	)
 {
 	std::complex<double> tfunc_val = 0.0 + I*0.0;    
-    double lens_param = lens_fac / geom_fac ;
+    double lens_param = lens_fac * pow(freq,freq_power) / geom_fac ;
+    std::complex<double> tempval;
     
 	for(int itheta = 2; itheta < theta_NM - 2; itheta++) 
     {
@@ -61,159 +26,313 @@ std::complex<double> GetTransferFuncVal(
 			if( IsStationary( itheta, jtheta, theta_NM,
 							theta_step, theta_min,	
 							dlens_arr, lens_param, betav )){
-				double theta_x = theta_step * itheta + theta_min;				    			
-				double theta_y = theta_step * jtheta + theta_min;					
-					
-				double geomdelay =  geom_fac*0.5*( pow( theta_x - betav.valx ,2.0) + pow( theta_y - betav.valy ,2.0));
 				
-				double phase = 2 * pi * freq * (geomdelay + lens_fac * lens_arr[jtheta + theta_NM * itheta] );
-			
-				std::complex<double> mag = GetMag(itheta, jtheta, theta_NM, ddlens_arr, lens_param);
-				
-                std::complex<double> tempval = mag*std::complex<double>( cos(phase), sin(phase));       
-				tfunc_val += tempval;				
+                tempval = GetImgVal( itheta, jtheta, theta_step, theta_NM, 
+                                    theta_min, freq, freq_ref, freq_power,        
+                                    lens_arr, ddlens_arr, geom_fac, lens_fac,betav);
+                tfunc_val += tempval;
+
 			}
         }
     }
-    return tfunc_val;
+
+    return tfunc_val ;
 } 
 
-std::complex<double> GetGravTransferFuncVal(
+std::complex<double> GetTwoPlaneTransferFuncVal(
 	const double theta_step,
 	const int theta_NM, 
-	const double theta_min,
+	const double theta_min,		
 	const double freq,
-	const std::vector<double> &fermat_pot,
-    const double mag_norm,
-	const double eins,
-	const double mass,
-	const double beta_x,
-	const double beta_y	
-)
+	const double freq_ref,    
+	const double freq_power1,        
+	const std::vector<double> &lens_arr1,
+	const std::vector<physpoint> &dlens_arr1,
+	const std::vector<physpoint> &ddlens_arr1,
+    const double geom_fac1,    
+    const double lens_fac1,
+	const double freq_power2,
+	const std::vector<double> &lens_arr2,
+	const std::vector<physpoint> &dlens_arr2,
+	const std::vector<physpoint> &ddlens_arr2,
+    const double geom_fac2,    
+    const double lens_fac2,    
+    const double multilens_12_scale,        
+	const physpoint beta1,
+	const physpoint lens12_offset
+    )
 {
-	std::complex<double> tfunc_val = 0.0 + I*0.0;
-	
-	
-    for(int itheta = 2; itheta < theta_NM - 2; itheta++)
-    {		
+	std::complex<double> tfunc_val = 0.0 + I*0.0;   
+    double lens_param1 = lens_fac1 * pow(freq,freq_power1) / geom_fac1 ;
+    double lens_param2 = lens_fac2 * pow(freq,freq_power2) / geom_fac2 ;
+    
+    double theta1_x, theta1_y, theta2_x, theta2_y;
+    double geomdelay1, phase1, geomdelay2, phase2, geomphase;    
+    std::complex<double> mag1, mag2;
+    
+    physpoint beta2;
+    
+	for(int itheta = 2; itheta < theta_NM - 2; itheta++) 
+    {
         for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
-        {        	
-			if( IsStationary(itheta, jtheta, theta_NM, fermat_pot) )
-			{
-				double imgphase,phase;
-				physpoint sourcepos,imagepos;
-				std::complex<double> mag, imgmag;
+        {
+			if( IsStationary( itheta, jtheta, theta_NM,
+							theta_step, theta_min,	
+							dlens_arr1, lens_param1, beta1 )){
+				theta1_x  = theta_step * jtheta + theta_min;				    			
+				theta1_y  = theta_step * itheta + theta_min;					
+					
+				geomdelay1 = geom_fac1*0.5*( pow( theta1_x - beta1.valx ,2.0) + pow( theta1_y - beta1.valy ,2.0));
 				
-				mag = GetMag(itheta, jtheta, theta_NM, theta_step, fermat_pot, mag_norm);				
-				phase = 2 * pi * freq * fermat_pot[jtheta + theta_NM * itheta];
+                if(freq_power1 != 0.0)
+                {
+                    geomphase =  2 * pi * (freq) * geomdelay1;
+                    phase1 = geomphase +  2 * pi * freq * lens_fac1 * ( pow( freq_ref,freq_power1) - pow( freq,freq_power1) )* lens_arr1[jtheta + theta_NM * itheta] ;
+                }else
+                {
+                    phase1 = geomdelay1 + lens_fac1 * pow( freq,freq_power1) * lens_arr1[jtheta + theta_NM * itheta] ;
+                    phase1 = phase1 * 2 * pi * freq ;                                        
+                }            
+				mag1 = GetMag(itheta, jtheta, theta_NM, ddlens_arr1, lens_param1);				
+                
+                beta2.valx = multilens_12_scale*theta1_x + lens12_offset.valx;
+                beta2.valy = multilens_12_scale*theta1_y + lens12_offset.valy;
+                
+                phase2 = 0.0; 
+                for(int ktheta = 2; ktheta < theta_NM - 2; ktheta++) 
+                {
+                    for(int ltheta = 2; ltheta < theta_NM - 2; ltheta++)
+                    {
+                        if( IsStationary( ktheta, ltheta, theta_NM,
+                                        theta_step, theta_min,	
+                                        dlens_arr2, lens_param2, beta2 ))
+                        {
+                            theta2_x  = theta_step * ltheta + theta_min;				    			
+                            theta2_y  = theta_step * ktheta + theta_min;					
+
+                            geomdelay2 = geom_fac2*0.5*( pow( theta2_x - beta2.valx ,2.0) + pow( theta2_y - beta2.valy ,2.0));
+
+                            if(freq_power2 != 0.0)
+                            {
+                                geomphase =  2 * pi * (freq) * geomdelay2;
+                                phase2 = geomphase +  2 * pi * freq * lens_fac2 * ( pow( freq_ref,freq_power2) - pow( freq,freq_power2) )* lens_arr2[ktheta + theta_NM * ltheta] ;
+                            }else
+                            {
+                                phase2 = geomdelay2 + lens_fac2 * lens_arr2[ktheta + theta_NM * ltheta] ;
+                                phase2 = phase2 * 2 * pi * freq ;                                        
+                            }            
+                            mag2 = GetMag(ktheta, ltheta, theta_NM, ddlens_arr2, lens_param2);				
+
+                            //tempval = std::conj(mag)*std::complex<double>( cos(phase), sin(phase));                       
+                            tfunc_val =  tfunc_val + std::conj(mag2)*std::conj(mag1)* std::complex<double>( cos(phase1+phase2), sin(phase1+phase2));				
+                        }
+                    }
+                }
+			}
+        }
+    }
+    return tfunc_val ;
+}
+
+
+std::complex<double> GetPMGravTransferFuncVal(
+	const double theta_step,
+	const int theta_NM, 
+	const double theta_min,		
+	const double freq,
+	const double freq_ref,    
+	const double freq_power,        
+	const std::vector<double> &lens_arr,
+	const std::vector<physpoint> &dlens_arr,
+	const std::vector<physpoint> &ddlens_arr,
+    const double geom_fac,    
+    const double lens_fac,
+	const double mass,
+	const physpoint betaE_v,
+	const physpoint betav,
+    const double multilens_scale
+	)
+{
+	double eins = 1.0; //unitless
+	std::complex<double> tfunc_val = 0.0 + I*0.0;   
+    double lens_param = lens_fac * pow(freq,freq_power) / geom_fac ;
+    double theta_x,theta_y;
+    double geomdelay, imgphase, phase;
+	physpoint sourcepos,imagepos;
+    std::complex<double> mag, imgmag;
+    
+	for(int itheta = 2; itheta < theta_NM - 2; itheta++) 
+    {
+        for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
+        {
+			if( IsStationary( itheta, jtheta, theta_NM,
+							theta_step, theta_min,	
+							dlens_arr, lens_param, betav )){
+				theta_x  = theta_step * jtheta + theta_min;				    			
+				theta_y  = theta_step * itheta + theta_min;					
+					
+				geomdelay = geom_fac*0.5*( pow( theta_x - betav.valx ,2.0) + pow( theta_y - betav.valy ,2.0));
 				
-				sourcepos.valx = theta_min + theta_step * itheta + beta_x;				
-				sourcepos.valy = theta_min + theta_step * jtheta + beta_y;
+                if(freq_power != 0.0)
+                {
+                    double geomphase =  2 * pi * (freq) * geomdelay;
+                    phase = geomphase +  2 * pi * freq * lens_fac * ( pow( freq_ref,freq_power) - pow( freq,freq_power) )* lens_arr[jtheta + theta_NM * itheta] ;
+                }else
+                {
+                    phase = geomdelay + lens_fac * lens_arr[jtheta + theta_NM * itheta] ;
+                    phase = phase * 2 * pi * freq ;                                        
+                }                
+            
+				mag = GetMag(itheta, jtheta, theta_NM, ddlens_arr, lens_param);
+												
+				sourcepos.valx = multilens_scale*theta_x + betaE_v.valx;				
+				sourcepos.valy = multilens_scale*theta_y + betaE_v.valy;
 
 				imagepos = map_grav_p(sourcepos, eins);
 				imgmag = grav_magval(imagepos, eins);
 				imgphase = grav_delayval(imagepos, sourcepos, eins, mass);
-				imgphase = 2 * pi * freq * imgphase;
-				tfunc_val = tfunc_val + imgmag*mag*std::exp(I*(phase+imgphase));
-				
+				imgphase = imgphase * 2 * pi * freq;
+                tfunc_val = tfunc_val + std::conj(imgmag) * std::conj(mag)*std::complex<double>( cos(phase+imgphase), sin(phase+imgphase));       
+            				
 				imagepos = map_grav_m(sourcepos, eins);
 				imgmag = grav_magval(imagepos, eins);
 				imgphase = grav_delayval(imagepos, sourcepos, eins, mass);								
-				imgphase = 2 * pi * freq * imgphase;				
-				tfunc_val = tfunc_val + imgmag*mag*std::exp(I*(phase+imgphase));
+				imgphase = imgphase * 2 * pi * freq;
+                tfunc_val = tfunc_val + std::conj(imgmag) * std::conj(mag)*std::complex<double>( cos(phase+imgphase), sin(phase+imgphase));       
 			}
         }
-    }		
-    return tfunc_val;
-} 
+    }
+
+    return tfunc_val ;
+}
 
 void GetFreqImage(
-	const double theta_step,        
-	const int theta_NM,
-	const int freqind,
-	const std::vector<double> &fermat_pot,
-    std::vector<imagepoint> &freq_images,
-    const double mag_norm    
-	)
+	const double theta_step,
+	const int theta_N, 
+	const double theta_min,		
+	const double freq,
+	const double freq_power,    
+	const std::vector<double> &lens_arr,
+	const std::vector<physpoint> &dlens_arr,
+	const std::vector<physpoint> &ddlens_arr,	
+    const double geom_fac,    
+    const double lens_fac,
+	const physpoint betav,        
+    std::vector<imagepoint> &freq_images)
 {
-    for(int itheta = 2; itheta < theta_NM - 2; itheta++)
+    double lens_param = lens_fac * pow(freq,freq_power) / geom_fac ;
+    double theta_x,theta_y;
+    double geomdelay,delayv;
+    std::complex<double> magv;    
+    imagepoint stationary_image;
+        
+	for(int itheta = 2; itheta < theta_N - 2; itheta++) 
     {
-        for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
-        {        	
-			if( IsStationary(itheta, jtheta, theta_NM, fermat_pot) )
-			{
-				imagepoint stationary_image;
-				stationary_image.xind = itheta;
-				stationary_image.yind = jtheta;
-				stationary_image.find = freqind;
-                stationary_image.delay = fermat_pot[jtheta + theta_NM * itheta] ;                                
-                stationary_image.mag = GetMag(itheta, jtheta, theta_NM, theta_step, fermat_pot, mag_norm);	
+        for(int jtheta = 2; jtheta < theta_N - 2; jtheta++)
+        {
+			if( IsStationary( itheta, jtheta, theta_N,
+							theta_step, theta_min,	
+							dlens_arr, lens_param, betav ))
+            {
+				theta_x = theta_step * jtheta + theta_min;				    			
+				theta_y = theta_step * itheta + theta_min;					
+					
+				geomdelay =  geom_fac*0.5*( pow( theta_x - betav.valx ,2.0) + pow( theta_y - betav.valy ,2.0));
+				
+                delayv = geomdelay + lens_fac * pow(freq,freq_power) * lens_arr[jtheta + theta_N * itheta];                   
                 
-				freq_images.push_back(stationary_image);
+				magv = GetMag(itheta, jtheta, theta_N, ddlens_arr, lens_param);
+				                
+				stationary_image.valx = theta_x;
+				stationary_image.valy = theta_y;
+				stationary_image.valf = freq;
+                stationary_image.delay = delayv;                                
+                stationary_image.mag = magv;	
+                
+				freq_images.push_back(stationary_image);                
 			}
         }
     }
-}   
+} 
 
-bool IsStationary(const int itheta, const int jtheta, const int theta_NM, const std::vector<double> &fermat_pot) 
+void GetMultiplaneFreqImage(
+	const double theta_step,
+	const int theta_N, 
+	const double theta_min,		
+    const double scaling_factor,                
+	const double freq,
+	const double freq_power1,        
+	const std::vector<double> &lens_arr1,
+	const std::vector<physpoint> &dlens_arr1,
+	const std::vector<physpoint> &ddlens_arr1,
+    const double geom_fac1,    
+    const double lens_fac1,
+	const physpoint beta1,    
+	const double freq_power2,
+	const std::vector<double> &lens_arr2,
+	const std::vector<physpoint> &dlens_arr2,
+	const std::vector<physpoint> &ddlens_arr2,
+    const double geom_fac2,    
+    const double lens_fac2,    
+	const physpoint beta2,
+    std::vector<imagepoint> &freq_images)    
 {
-	double F_cntr = fermat_pot[jtheta + theta_NM * itheta];
-    if(std::isinf(F_cntr) 
-	|| std::isinf(fermat_pot[jtheta + 1 + theta_NM * itheta])
-	|| std::isinf(fermat_pot[jtheta - 1 + theta_NM * itheta])
-	|| std::isinf(fermat_pot[jtheta + theta_NM * (itheta + 1)])
-	|| std::isinf(fermat_pot[jtheta + theta_NM * (itheta + 1)])   ){return false;}
-
+    double lens_param1 = lens_fac1 * pow(freq,freq_power1) / geom_fac1 ;
+    double lens_param2 = lens_fac2 * pow(freq,freq_power2) / geom_fac2 ;
     
-    // central difference
-	double F_cntr_dy = fermat_pot[jtheta  + theta_NM * (itheta + 1)] - fermat_pot[jtheta  + theta_NM * (itheta - 1)];
-	double F_cntr_dx = fermat_pot[(jtheta + 1) + theta_NM * itheta] - fermat_pot[(jtheta - 1) + theta_NM * itheta];
+    double theta1_x, theta1_y, theta2_x, theta2_y;
+    double delay1, delay2;    
+    std::complex<double> mag1, mag2;
 
-    if((F_cntr_dy == 0) && (F_cntr_dx == 0)){return true;}
+    physpoint beta_stat;
+    imagepoint stationary_image;    
     
-    // y difference
-	double F_up_dy = fermat_pot[jtheta  + theta_NM * (itheta + 2)] - F_cntr;
-	double F_down_dy = F_cntr - fermat_pot[jtheta  + theta_NM * (itheta - 2)];
-        
-    if(StatCellCheck(F_cntr_dy,F_down_dy) || StatCellCheck(F_cntr_dy,F_up_dy) )
+	for(int itheta = 2; itheta < theta_N - 2; itheta++) 
     {
-        // x difference 
-        double F_right_dx = fermat_pot[(jtheta + 2) + theta_NM * itheta] - F_cntr;
-        double F_left_dx = F_cntr - fermat_pot[(jtheta - 2) + theta_NM * itheta];            
-        
-        if(StatCellCheck(F_cntr_dx,F_right_dx) || StatCellCheck(F_cntr_dx,F_left_dx) )
+        for(int jtheta = 2; jtheta < theta_N - 2; jtheta++)
         {
-            return true;         
-         }else
-        {
-            return false;
-        }        
-    }else
-    {
-        return false;
+			if( IsStationary( itheta, jtheta, theta_N,
+							theta_step, theta_min,	
+							dlens_arr1, lens_param1, beta1 ))
+            {
+				theta1_x  = theta_step * jtheta + theta_min;				    			
+				theta1_y  = theta_step * itheta + theta_min;					
+					
+				delay1 = geom_fac1*0.5*( pow( theta1_x - beta1.valx ,2.0) + pow( theta1_y - beta1.valy ,2.0)) +  lens_fac1 * pow( freq,freq_power1) * lens_arr1[jtheta + theta_N * itheta];
+				mag1 = GetMag(itheta, jtheta, theta_N, ddlens_arr1, lens_param1);				
+                                
+                beta_stat.valx = scaling_factor*theta1_x + beta2.valx;
+                beta_stat.valy = scaling_factor*theta1_y + beta2.valy;
+                
+                for(int ktheta = 2; ktheta < theta_N - 2; ktheta++) 
+                {
+                    for(int ltheta = 2; ltheta < theta_N - 2; ltheta++)
+                    {
+                        if( IsStationary( ktheta, ltheta, theta_N,
+                                        theta_step, theta_min,	
+                                        dlens_arr2, lens_param2, beta_stat ))
+                        {                            
+                            theta2_x  = theta_step * ltheta + theta_min;				    			
+                            theta2_y  = theta_step * ktheta + theta_min;					
+                            
+                            delay2 = geom_fac2*0.5*( pow( theta2_x - beta_stat.valx ,2.0) + pow( theta2_y - beta_stat.valy ,2.0)) + lens_fac2 * pow( freq,freq_power2) * lens_arr2[ltheta + theta_N * ktheta] ;
+                            
+                            mag2 = GetMag(ktheta, ltheta, theta_N, ddlens_arr2, lens_param2);				
+                                                        
+                            stationary_image.valx = theta2_x;
+                            stationary_image.valy = theta2_y;
+                            stationary_image.valf = freq;
+                            stationary_image.delay = delay2 + delay1;                                
+                            stationary_image.mag = mag2*mag1;	
+
+                            freq_images.push_back(stationary_image);                
+
+                        }
+                    }
+                }
+			}
+        }
     }
-
-    
-    //if((Sign(F_right_dx - F_cntr_dx) !=  Sign(F_left_dx - F_cntr_dx)) && (Sign(F_fy) != Sign(F_by) ))
-
-	//F_fx = fermat_pot[jtheta  + theta_NM * (itheta + 1)] - F_cntr;
-	//F_fy = fermat_pot[(jtheta + 1) + theta_NM * itheta] - F_cntr;	
-
-	//F_bx = F_cntr - fermat_pot[jtheta  + theta_NM * (itheta - 1)];		
-	//F_by = F_cntr - fermat_pot[(jtheta - 1) + theta_NM * itheta];
-    
-	//if( ((Sign(F_fx) *  Sign(F_bx)  < 0) && (Sign(F_fy) * Sign(F_by) < 0)) || ( F_fx + F_bx + F_fy + F_by == 0) )
-    //if((Sign(F_fx) !=  Sign(F_bx)) && (Sign(F_fy) != Sign(F_by) ))
-	//{
-		//std::cout << "c Stationary 2: " << itheta << "," << jtheta <<"\n" ;
-		//std::cout << "c Stationary fx,fy,bx,by: " << F_fx  << "," << F_fy  << "," << F_fx  << "," << F_fy  << "," <<"\n" ;
-		//std::cout << "c Stationary fxs,fys : " << Fx_sign  << "," << Fy_sign <<"\n" ;						
-	//	return true;
-	//}else
-	//{
-	//	return false;
-	//}	
-
 }
 
 bool IsStationary(
@@ -229,21 +348,21 @@ bool IsStationary(
 	physpoint pnt_cntr = dlens_arr[jtheta + theta_NM * itheta];
     if(std::isinf(pnt_cntr.valx) || std::isinf(pnt_cntr.valy) ) {return false;}
 	
-	double fx_cntr = theta_step * jtheta + theta_min + lens_param * pnt_cntr.valx;
-	double fy_cntr = theta_step * itheta + theta_min + lens_param * pnt_cntr.valy;	
+	double fx_cntr = theta_step * jtheta + theta_min + lens_param * pnt_cntr.valx - betav.valx;
+	double fy_cntr = theta_step * itheta + theta_min + lens_param * pnt_cntr.valy - betav.valy;
 	
-	if((betav.valx == fx_cntr) && (betav.valy == fy_cntr)){return true;}	
+	if((fx_cntr == 0.0) && (fy_cntr == 0.0)){return true;}	
     	
 	physpoint pnt_left = dlens_arr[jtheta - 1 + theta_NM * itheta];	
-    if(std::isinf(pnt_left.valx) || std::isinf(pnt_left.valy) ) {return false;}
-   	    
-	physpoint pnt_right = dlens_arr[jtheta + 1 + theta_NM * itheta];
+    if(std::isinf(pnt_left.valx) || std::isinf(pnt_left.valy) ) {return false;}   	    
+    
+	physpoint pnt_right = dlens_arr[jtheta + 1 + theta_NM * itheta];    
     if(std::isinf(pnt_right.valx) || std::isinf(pnt_right.valy) ) {return false;}
-	
-	double fx_left = theta_step * (jtheta - 1) + theta_min + lens_param * pnt_left.valx;	
-	double fx_right = theta_step * (jtheta + 1) + theta_min + lens_param * pnt_right.valx;
+    	
+	double fx_left = theta_step * (jtheta - 1) + theta_min + lens_param * pnt_left.valx - betav.valx;	
+	double fx_right = theta_step * (jtheta + 1) + theta_min + lens_param * pnt_right.valx - betav.valx;
 
-	if( CellCheck(fx_left, fx_cntr, fx_right, betav.valx))
+	if( StatCellCheck(fx_cntr,fx_left) || StatCellCheck(fx_cntr,fx_right))
 	{
 		physpoint pnt_up = dlens_arr[jtheta + theta_NM * (itheta - 1)];
 	    if(std::isinf(pnt_up.valx) || std::isinf(pnt_up.valy) ) {return false;}
@@ -251,84 +370,86 @@ bool IsStationary(
 		physpoint pnt_down = dlens_arr[jtheta + theta_NM * (itheta + 1 )];
 	    if(std::isinf(pnt_down.valx) || std::isinf(pnt_down.valy) ) {return false;}		
 	
-		double fy_up = theta_step * (itheta - 1) + theta_min + lens_param * pnt_up.valy;	
-		double fy_down = theta_step * (itheta + 1) + theta_min + lens_param * pnt_down.valy;
+		double fy_up = theta_step * (itheta - 1) + theta_min + lens_param * pnt_up.valy - betav.valy;	
+		double fy_down = theta_step * (itheta + 1) + theta_min + lens_param * pnt_down.valy - betav.valy;
 	
-		if( CellCheck(fy_up, fy_cntr, fy_down, betav.valy)){
+		if(StatCellCheck(fy_cntr,fy_up) || StatCellCheck(fy_cntr,fy_down)){
 			return true;
-		}		
-	}else
-	{
-		return false;
-	}
-}
-
-std::complex<double> GetMag(const int itheta, const int jtheta, const int theta_NM, const double theta_step, const std::vector<double> &fermat_pot, const double geom_factor)
-{
-	std::complex<double> magval, fxx,fxy,fyy;	
-	magval = 0.0+I*0.0;
-	
-	fxx = ( -fermat_pot[(jtheta) + theta_NM * (itheta+2)]
-			+16.0*fermat_pot[(jtheta) + theta_NM * (itheta+1)]
-			-30.0*fermat_pot[(jtheta) + theta_NM * (itheta)]
-			+16.0*fermat_pot[(jtheta) + theta_NM * (itheta-1)]
-			-fermat_pot[(jtheta) + theta_NM * (itheta-2)]	
-		)/ (12.0 * theta_step * theta_step);
-
-	fyy = ( -fermat_pot[(jtheta+2) + theta_NM * (itheta)]
-			+16.0*fermat_pot[(jtheta+1) + theta_NM * (itheta)]
-			-30.0*fermat_pot[(jtheta) + theta_NM * (itheta)]
-			+16.0*fermat_pot[(jtheta-1) + theta_NM * (itheta)]
-			-fermat_pot[(jtheta-2) + theta_NM * (itheta)]	
-		)/ (12.0 * theta_step * theta_step);
-
-	fxy = ( -fermat_pot[(jtheta+2) + theta_NM * (itheta+2)]
-			+fermat_pot[(jtheta-2) + theta_NM * (itheta+2)]
-			+fermat_pot[(jtheta+2) + theta_NM * (itheta-2)]
-			-fermat_pot[(jtheta-2) + theta_NM * (itheta-2)]	
-			+16.0*fermat_pot[(jtheta+1) + theta_NM * (itheta+1)]
-			-16.0*fermat_pot[(jtheta-1) + theta_NM * (itheta+1)]
-			-16.0*fermat_pot[(jtheta+1) + theta_NM * (itheta-1)]
-			+16.0*fermat_pot[(jtheta-1) + theta_NM * (itheta-1)]
-		)/ (48.0 * theta_step * theta_step);
-		
-	//fxx = (fermat_pot[jtheta + theta_NM * (itheta+1)] - 2*fermat_pot[jtheta + theta_NM * itheta] + fermat_pot[jtheta + theta_NM * (itheta-1)])/(theta_step * theta_step) ;
-	//fyy = (fermat_pot[(jtheta+1) + theta_NM * itheta] - 2*fermat_pot[jtheta + theta_NM * itheta] + fermat_pot[(jtheta-1) + theta_NM * itheta])/(theta_step * theta_step) ;	
-	//fxy = (fermat_pot[(jtheta+1) + theta_NM * (itheta+1)] - fermat_pot[(jtheta+1) + theta_NM * (itheta-1)] - fermat_pot[(jtheta-1) + theta_NM * (itheta+1)] + fermat_pot[(jtheta-1) + theta_NM * (itheta-1)])/( 4.0*theta_step * theta_step) ;
-	
-	magval += fxx*fyy - fxy*fxy ;			
-	
-	if(magval == 0.0 + I*0.0 )
-		{
-			return 0.0+I*0.0;
-		}
-	else
-	{
-		magval = pow(magval,-0.5);
-		magval *= geom_factor; // normalization to unlensed case 
-		return magval;	
-	}
+		}else{return false;}   
+	}else{
+        return false;
+    }
+    return false;
 }
 
 std::complex<double> GetMag(const int itheta, const int jtheta, const int theta_NM, const std::vector<physpoint> &mag_arr, const double lens_param)
 {
-	std::complex<double> magval;	
+	std::complex<double> magvalcntr, magvalup, magvaldown, magvalleft, magvalright;	
 	
-	physpoint maghess = mag_arr[jtheta + theta_NM * itheta];
-	
+	physpoint maghesscntr = mag_arr[jtheta + theta_NM * itheta];
+	physpoint maghessup = mag_arr[jtheta + theta_NM * (itheta-1)];
+	physpoint maghessdown = mag_arr[jtheta + theta_NM * (itheta+1)];
+	physpoint maghessleft = mag_arr[(jtheta-1) + theta_NM * itheta];
+	physpoint maghessright = mag_arr[(jtheta+1) + theta_NM * itheta];
+    	
 	//                                            Det(Hess)                   Tr(Hess)
-	magval = 1.+I*0.0 + lens_param * lens_param * maghess.valy + lens_param * maghess.valx ; 
-	
-	if(magval == 0.0 + I*0.0 )
-		{
-			std::cout << "Warning: No curvature / Caustic at " << itheta << "," << jtheta <<"\n" ;			
-			return 0.0+I*0.0;
-		}
-	else
+	magvalcntr = 1.0 + lens_param * lens_param * maghesscntr.valy + lens_param * maghesscntr.valx ; 
+	magvalup = 1.0 + lens_param * lens_param * maghessup.valy + lens_param * maghessup.valx ; 
+	magvaldown = 1.0 + lens_param * lens_param * maghessdown.valy + lens_param * maghessdown.valx ; 
+	magvalleft = 1.0 + lens_param * lens_param * maghessleft.valy + lens_param * maghessleft.valx ; 
+	magvalright = 1.0 + lens_param * lens_param * maghessright.valy + lens_param * maghessright.valx ; 
+
+    if( (StatCellCheck(fabs(magvalcntr),fabs(magvalleft)) || StatCellCheck(fabs(magvalcntr),fabs(magvalright))) 
+       && (StatCellCheck(fabs(magvalcntr),fabs(magvalup)) || StatCellCheck(fabs(magvalcntr),fabs(magvaldown))) ){
+        std::cout << "Warning: No curvature / Caustic at " << itheta << "," << jtheta <<"\n" ;			
+		return 0.0+I*0.0;                
+    }else
 	{
-		magval = pow(magval,-0.5);
-		return magval;	
+		magvalcntr = pow(magvalcntr,-0.5);
+		return magvalcntr;	
 	}
+}
+
+std::complex<double> GetImgVal(
+    const int itheta,
+    const int jtheta,
+	const double theta_step,
+	const int theta_N, 
+	const double theta_min,		
+	const double freq,
+	const double freq_ref,    
+	const double freq_power,        
+	const std::vector<double> &lens_arr,
+	const std::vector<physpoint> &ddlens_arr,
+    const double geom_fac,    
+    const double lens_fac,
+	const physpoint betav
+){
+    double phase;
+    double theta_x  = theta_step * jtheta + theta_min;				    			
+    double theta_y  = theta_step * itheta + theta_min;					
+    double lens_param = lens_fac * pow(freq,freq_power) / geom_fac ;
+    std::complex<double> mag;
+
+    double geomdelay = geom_fac*0.5*( pow( theta_x - betav.valx ,2.0) + pow( theta_y - betav.valy ,2.0));
+
+    if(freq_power != 0.0)
+    {
+        double geomphase =  2 * pi * freq * geomdelay;
+        phase = geomphase +  2 * pi * freq * lens_fac \
+        *( pow( freq_ref,freq_power) - pow( freq,freq_power) )\
+        *lens_arr[jtheta + theta_N * itheta] ;
+    }else
+    {
+        phase = geomdelay + lens_fac * lens_arr[jtheta + theta_N * itheta] ;
+        phase = phase * 2 * pi * freq ;                                        
+    }
+
+
+    mag = GetMag(itheta, jtheta, theta_N, ddlens_arr, lens_param);
+
+    mag = std::conj(mag)*std::complex<double>( cos(phase), sin(phase));
+    return mag;
 }
 
 void SetGeometricDelayArr(
@@ -342,10 +463,10 @@ void SetGeometricDelayArr(
 {
 	assert ( geom_arr.size() == theta_NM * theta_NM);	
 	
-	for(int arr_ii; arr_ii < theta_NM; arr_ii++)
+	for(int arr_ii = 0; arr_ii < theta_NM; arr_ii++)
 	{
 		double theta_x = (theta_max - theta_min) / (theta_NM - 1) * arr_ii + theta_min;				
-		for(int arr_jj; arr_jj < theta_NM; arr_jj++)
+		for(int arr_jj = 0; arr_jj < theta_NM; arr_jj++)
 		{
 			double theta_y = (theta_max - theta_min) / (theta_NM - 1) * arr_jj + theta_min;
             int arr_ind = arr_jj + arr_ii * theta_NM;
@@ -451,7 +572,7 @@ int Sign(const double val){
 }
 
 bool StatCellCheck(const double a, const double b){
-    if((Sign(a) != Sign(b)) && fabs(a) < fabs(b)){
+    if(( (Sign(a) != Sign(b)) || (a == 0.0) ) && (fabs(a) < fabs(b)) ){
         return true;
     }else{
         return false;        

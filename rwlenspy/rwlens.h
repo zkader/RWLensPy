@@ -12,9 +12,9 @@ const double pi = 3.14159265358979323846;
 const std::complex<double> I (0,1.0);
 
 typedef struct imagepoint {
-	int xind;
-	int yind;
-	int find;
+	double valx;
+	double valy;
+	double valf;
     double delay;
     std::complex<double> mag;
 } imagepoint;
@@ -24,20 +24,13 @@ typedef struct physpoint {
 	double valy = 0.0;
 } physpoint;
 
-// 
-std::complex<double> GetTransferFuncVal(
-	const double theta_step,
-	const int theta_NM, 
-	const double freq,                    // [Hz]
-	const std::vector<double> &fermat_pot, // [s]
-	const double geom_factor // [1/s]
-);
-
 std::complex<double> GetTransferFuncVal(
 	const double theta_step,
 	const int theta_NM, 
 	const double theta_min,		
 	const double freq,
+	const double freq_ref,    
+	const double freq_power,       
 	const std::vector<double> &lens_arr,
 	const std::vector<physpoint> &dlens_arr,
 	const std::vector<physpoint> &ddlens_arr,	
@@ -46,33 +39,83 @@ std::complex<double> GetTransferFuncVal(
 	const physpoint betav
 );
 
-std::complex<double> GetGravTransferFuncVal(
+std::complex<double> GetTwoPlaneTransferFuncVal(
 	const double theta_step,
 	const int theta_NM, 
-	const double theta_min,
+	const double theta_min,		
 	const double freq,
-	const std::vector<double> &fermat_pot,
-    const double geom_factor,
-	const double eins,
+	const double freq_ref,    
+	const double freq_power1,        
+	const std::vector<double> &lens_arr1,
+	const std::vector<physpoint> &dlens_arr1,
+	const std::vector<physpoint> &ddlens_arr1,
+    const double geom_fac1,    
+    const double lens_fac1,
+	const double freq_power2,
+	const std::vector<double> &lens_arr2,
+	const std::vector<physpoint> &dlens_arr2,
+	const std::vector<physpoint> &ddlens_arr2,
+    const double geom_fac2,    
+    const double lens_fac2,    
+    const double multilens_12_scale,        
+	const physpoint beta1,
+	const physpoint lens12_offset    
+);
+
+std::complex<double> GetPMGravTransferFuncVal(
+	const double theta_step,
+	const int theta_NM, 
+	const double theta_min,		
+	const double freq,
+	const double freq_ref,    
+	const double freq_power,        
+	const std::vector<double> &lens_arr,
+	const std::vector<physpoint> &dlens_arr,
+	const std::vector<physpoint> &ddlens_arr,
+    const double geom_fac,    
+    const double lens_fac,
 	const double mass,
-	const double beta_x,
-	const double beta_y
+	const physpoint betaE_v,
+	const physpoint betav,
+    const double multilens_scale
 );
 
 void GetFreqImage(
-	const double theta_step,        
-	const int theta_NM,
-	const int freqind,
-	const std::vector<double> &fermat_pot, // [s]
-    std::vector<imagepoint> &freq_images,
-    const double geom_factor
-); 
+	const double theta_step,
+	const int theta_N, 
+	const double theta_min,		
+	const double freq,
+	const double freq_power, 
+	const std::vector<double> &lens_arr,
+	const std::vector<physpoint> &dlens_arr,
+	const std::vector<physpoint> &ddlens_arr,	
+    const double geom_fac,    
+    const double lens_fac,
+	const physpoint betav,        
+    std::vector<imagepoint> &freq_images
+);
 
-bool IsStationary(
-	const int itheta,
-	const int jtheta,
-	const int theta_NM,
-	const std::vector<double> &fermat_pot
+void GetMultiplaneFreqImage(
+	const double theta_step,
+	const int theta_N, 
+	const double theta_min,		
+    const double scaling_factor,                
+	const double freq,
+	const double freq_power1,        
+	const std::vector<double> &lens_arr1,
+	const std::vector<physpoint> &dlens_arr1,
+	const std::vector<physpoint> &ddlens_arr1,
+    const double geom_fac1,    
+    const double lens_fac1,
+	const physpoint beta1,    
+	const double freq_power2,
+	const std::vector<double> &lens_arr2,
+	const std::vector<physpoint> &dlens_arr2,
+	const std::vector<physpoint> &ddlens_arr2,
+    const double geom_fac2,    
+    const double lens_fac2,    
+	const physpoint beta2,
+    std::vector<imagepoint> &freq_images
 ); 
 
 bool IsStationary(
@@ -90,17 +133,24 @@ std::complex<double> GetMag(
 	const int itheta,
 	const int jtheta,
 	const int theta_NM,
-	const double theta_step, 
-	const std::vector<double> &fermat_pot,
-        const double geom_factor
-);
-
-std::complex<double> GetMag(
-	const int itheta,
-	const int jtheta,
-	const int theta_NM,
 	const std::vector<physpoint> &mag_arr,
 	const double lens_param
+);
+
+std::complex<double> GetImgVal(
+    const int itheta,
+    const int jtheta,
+	const double theta_step,
+	const int theta_N, 
+	const double theta_min,		
+	const double freq,
+	const double freq_ref,    
+	const double freq_power,        
+	const std::vector<double> &lens_arr,
+	const std::vector<physpoint> &ddlens_arr,
+    const double geom_fac,    
+    const double lens_fac,
+	const physpoint betav
 );
 
 void SetGeometricDelayArr(
