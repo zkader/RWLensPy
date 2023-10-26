@@ -62,7 +62,7 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
 	const physpoint lens12_offset    
 );
 
-std::complex<double> GetPMGravTransferFuncVal(
+std::complex<double> GetPlanePMGravTransferFuncVal(
 	const double theta_step,
 	const int theta_NM, 
 	const double theta_min,		
@@ -78,6 +78,12 @@ std::complex<double> GetPMGravTransferFuncVal(
 	const physpoint betaE_v,
 	const physpoint betav,
     const double multilens_scale
+);
+
+std::complex<double> GetPMGravTransferFuncVal(
+	const double freq,
+	const double mass,
+	const physpoint betav
 );
 
 void GetFreqImage(
@@ -117,6 +123,24 @@ void GetMultiplaneFreqImage(
 	const physpoint beta2,
     std::vector<imagepoint> &freq_images
 ); 
+
+void GetPlaneToPMGravFreqImage(
+	const double theta_step,
+	const int theta_N, 
+	const double theta_min,		
+    const double scaling_factor,                
+	const double freq,
+	const double freq_power1,        
+	const std::vector<double> &lens_arr1,
+	const std::vector<physpoint> &dlens_arr1,
+	const std::vector<physpoint> &ddlens_arr1,
+    const double geom_fac1,    
+    const double lens_fac1,
+	const physpoint beta1,    
+	const double mass,
+	const physpoint betaE_v,
+    std::vector<imagepoint> &freq_images
+);
 
 bool IsStationary(
 	const int itheta,

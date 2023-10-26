@@ -135,7 +135,7 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
 }
 
 
-std::complex<double> GetPMGravTransferFuncVal(
+std::complex<double> GetPlanePMGravTransferFuncVal(
 	const double theta_step,
 	const int theta_NM, 
 	const double theta_min,		
@@ -206,6 +206,34 @@ std::complex<double> GetPMGravTransferFuncVal(
     return tfunc_val ;
 }
 
+std::complex<double> GetPMGravTransferFuncVal(
+	const double freq,
+	const double mass,
+	const physpoint betav
+	)
+{
+	double eins = 1.0; //unitless
+	std::complex<double> tfunc_val = 0.0 + I*0.0;
+    double imgphase;
+	physpoint sourcepos,imagepos;
+    std::complex<double> imgmag;
+    
+    imagepos = map_grav_p(betav, eins);
+    imgmag = grav_magval(imagepos, eins);
+    imgphase = grav_delayval(imagepos, betav, eins, mass);    
+	imgphase = imgphase * 2 * pi * freq;
+    
+    tfunc_val = tfunc_val + std::conj(imgmag) * std::complex<double>( cos(imgphase), sin(imgphase));
+            				
+    imagepos = map_grav_m(betav, eins);
+    imgmag = grav_magval(imagepos, eins);
+    imgphase = grav_delayval(imagepos, betav, eins, mass);								
+    imgphase = imgphase * 2 * pi * freq;
+    tfunc_val = tfunc_val + std::conj(imgmag) * std::complex<double>( cos(imgphase), sin(imgphase));       
+	
+    return tfunc_val ;
+}
+
 void GetFreqImage(
 	const double theta_step,
 	const int theta_N, 
@@ -254,6 +282,7 @@ void GetFreqImage(
         }
     }
 } 
+
 
 void GetMultiplaneFreqImage(
 	const double theta_step,
@@ -334,6 +363,80 @@ void GetMultiplaneFreqImage(
         }
     }
 }
+
+void GetPlaneToPMGravFreqImage(
+	const double theta_step,
+	const int theta_N, 
+	const double theta_min,		
+    const double scaling_factor,                
+	const double freq,
+	const double freq_power1,        
+	const std::vector<double> &lens_arr1,
+	const std::vector<physpoint> &dlens_arr1,
+	const std::vector<physpoint> &ddlens_arr1,
+    const double geom_fac1,    
+    const double lens_fac1,
+	const physpoint beta1,    
+	const double mass,
+	const physpoint betaE_v,
+    std::vector<imagepoint> &freq_images)    
+{
+    double lens_param1 = lens_fac1 * pow(freq,freq_power1) / geom_fac1 ;
+	double eins = 1.0; //unitless
+    
+    double theta1_x, theta1_y;
+    double delay1, delay2;    
+    std::complex<double> mag1, mag2;
+
+    physpoint beta_stat,imagepos;
+    imagepoint grav_image;    
+    
+	for(int itheta = 2; itheta < theta_N - 2; itheta++) 
+    {
+        for(int jtheta = 2; jtheta < theta_N - 2; jtheta++)
+        {
+			if( IsStationary( itheta, jtheta, theta_N,
+							theta_step, theta_min,	
+							dlens_arr1, lens_param1, beta1 ))
+            {
+				theta1_x  = theta_step * jtheta + theta_min;				    			
+				theta1_y  = theta_step * itheta + theta_min;					
+					
+				delay1 = geom_fac1*0.5*( pow( theta1_x - beta1.valx ,2.0) + pow( theta1_y - beta1.valy ,2.0)) +  lens_fac1 * pow( freq,freq_power1) * lens_arr1[jtheta + theta_N * itheta];
+				mag1 = GetMag(itheta, jtheta, theta_N, ddlens_arr1, lens_param1);				
+                                
+                beta_stat.valx = scaling_factor*theta1_x + betaE_v.valx;
+                beta_stat.valy = scaling_factor*theta1_y + betaE_v.valy;
+                
+				imagepos = map_grav_p(beta_stat, eins);
+                mag2 = grav_magval(imagepos, eins);
+				delay2 = grav_delayval(imagepos, beta_stat, eins, mass);
+
+                grav_image.valx = imagepos.valx;
+                grav_image.valy = imagepos.valy;
+                grav_image.valf = freq;
+                grav_image.delay = delay2 + delay1;                                
+                grav_image.mag = mag2*mag1;	
+
+                freq_images.push_back(grav_image);                                
+                
+				imagepos = map_grav_m(beta_stat, eins);
+                mag2 = grav_magval(imagepos, eins);
+				delay2 = grav_delayval(imagepos, beta_stat, eins, mass);
+                
+                grav_image.valx = imagepos.valx;
+                grav_image.valy = imagepos.valy;
+                grav_image.valf = freq;
+                grav_image.delay = delay2 + delay1;                                
+                grav_image.mag = mag2*mag1;	
+
+                freq_images.push_back(grav_image);                                
+                
+			}
+        }
+    }
+}
+
 
 bool IsStationary(
 	const int itheta,

@@ -130,7 +130,7 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
             
-            tfunc[freq_ii] = GetPMGravTransferFuncVal( theta_step, theta_N, theta_min, freq_val,\
+            tfunc[freq_ii] = GetPlanePMGravTransferFuncVal( theta_step, theta_N, theta_min, freq_val,\
                                                       freq_ref, freq_power, lens_arr, grad_lens_arr,\
                                                       hess_lens_arr, geom_const, lens_const, mass,\
                                                       beta_E_vec, beta_vec, lens_scaling)
@@ -195,7 +195,31 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
             
     return tfunc
 
-
+cpdef vector[complex] RunGravTransferFunc(
+                                       vector[double] freq_arr,
+                                       double beta_x,
+                                       double beta_y,    
+                                       double mass
+                                       ):
+    # T(theta) = geom_const*geom_arr(theta,beta) + lens_const*freq^-2*lens_arr(theta)
+    # mass in M_sol
+    cdef int freq_N = freq_arr.size()
+    cdef vector[complex] tfunc = vector[complex](freq_N)
+    cdef physpoint beta_vec
+    
+    beta_vec.valx = beta_x
+    beta_vec.valy = beta_y
+    
+    cdef int freq_ii
+    cdef double freq_val
+    
+    with nogil, parallel():
+        for freq_ii in prange(freq_N):
+            freq_val = freq_arr[freq_ii]
+            
+            tfunc[freq_ii] = GetPMGravTransferFuncVal( freq_val, mass, beta_vec)
+            
+    return tfunc
 
 """
 ===================================================================
@@ -303,6 +327,73 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
                                    beta_1_vec, freq_power_2, lens_arr_2, grad_lens_arr_2, hess_lens_arr_2,\
                                    geom_const_2, lens_const_2, beta_2_vec, freqpnts[freq_ii])  
             
+    cdef vector[double] thetaxs_,thetays_,freqs_
+    cdef vector[complex] magarr
+    cdef vector[double] delayarr
+    
+    thetaxs_,thetays_,freqs_,delayarr,magarr = ConvertFreqStatPnts(freqpnts)
+
+    return thetaxs_,thetays_,freqs_,delayarr,magarr
+
+
+cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
+                                       double theta_max,
+                                       int theta_N,
+                                       vector[double] freq_arr,
+                                       double freq_ref,
+                                       vector[double] lens_arr_1,
+                                       double lens_scale_1,
+                                       double beta_1_x,
+                                       double beta_1_y,
+                                       double geom_const_1,
+                                       double lens_const_1,
+                                       double freq_power_1,
+                                       double mass,
+                                       double lens_scale_2,
+                                       double beta_2_x,
+                                       double beta_2_y
+                                     ):
+    # T(theta) = geom_const*geom_arr(theta,beta) + lens_const*freq^-2*lens_arr(theta)    
+    cdef int freq_N = freq_arr.size()
+    cdef vector[physpoint] grad_lens_arr_1 = vector[physpoint](theta_N*theta_N)
+    cdef vector[physpoint] hess_lens_arr_1 = vector[physpoint](theta_N*theta_N)
+    cdef vector[vector[imagepoint]] freqpnts = vector[vector[imagepoint]](freq_N)
+	
+    cdef physpoint beta_1_vec, beta_2_vec
+    
+    beta_1_vec.valx = beta_1_x
+    beta_1_vec.valy = beta_1_y
+    
+    beta_2_vec.valx = beta_2_x
+    beta_2_vec.valy = beta_2_y
+	
+    cdef int freq_ii
+    cdef double theta_step, freq_val
+    cdef double lens_scaling = lens_scale_1 / lens_scale_2
+
+    theta_step = (theta_max - theta_min) /  (theta_N - 1)
+    SetGradientArrs( theta_N, theta_step, lens_arr_1, grad_lens_arr_1, hess_lens_arr_1)
+            
+    with nogil, parallel():
+        for freq_ii in prange(freq_N):
+            freq_val = freq_arr[freq_ii]
+
+            GetPlaneToPMGravFreqImage(theta_step,\
+                                      theta_N,\
+                                      theta_min,\
+                                      lens_scaling,\
+                                      freq_val,\
+                                      freq_power_1,\
+                                      lens_arr_1,\
+                                      grad_lens_arr_1,\
+                                      hess_lens_arr_1,\
+                                      geom_const_1,\
+                                      lens_const_1,\
+                                      beta_1_vec,\
+                                      mass,\
+                                      beta_2_vec,\
+                                      freqpnts[freq_ii])
+
     cdef vector[double] thetaxs_,thetays_,freqs_
     cdef vector[complex] magarr
     cdef vector[double] delayarr

@@ -49,7 +49,7 @@ cdef extern from "rwlens.h":
 	physpoint beta1,
 	physpoint lens12_offset) nogil
 
-    double complex GetPMGravTransferFuncVal(
+    double complex GetPlanePMGravTransferFuncVal(
 	double theta_step,
 	int theta_NM, 
 	double theta_min,		
@@ -65,6 +65,11 @@ cdef extern from "rwlens.h":
 	physpoint betaE_v,
 	physpoint betav,
     double multilens_scale) nogil
+    
+    double complex GetPMGravTransferFuncVal(
+    double freq,
+    double mass,
+    physpoint betav) nogil
     
     double complex GetGravTransferFuncVal(
 	double theta_step,
@@ -104,6 +109,23 @@ cdef extern from "rwlens.h":
         double geom_fac2,
         double lens_fac2,
         physpoint beta2,
+        vector[imagepoint]& freq_images) nogil
+    
+    void GetPlaneToPMGravFreqImage(
+        double theta_step,
+        int theta_N,
+        double theta_min,
+        double scaling_factor,
+        double freq,
+        double freq_power1,
+        vector[double]& lens_arr1,
+        vector[physpoint]& dlens_arr1,
+        vector[physpoint]& ddlens_arr1,
+        double geom_fac1,
+        double lens_fac1,
+        physpoint beta1,
+        double mass,
+        physpoint betaE_v,
         vector[imagepoint]& freq_images) nogil
     
     double complex GetMag(int itheta, int jtheta, int theta_NM,\
