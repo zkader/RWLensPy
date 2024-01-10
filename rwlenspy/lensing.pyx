@@ -413,6 +413,12 @@ cpdef GetLensGradArrs(vector[double] lens_arr,
                                        double theta_min,
                                        double theta_max,
                                        int theta_N):
+    """
+    Get the gradient and trace and determinant of the hessian of the lens array.
+    
+    This is a wrapper function for the C++ functions. 
+    
+    """  
     # T(theta) = geom_const*geom_arr(theta,beta) + lens_const*freq^-2*lens_arr(theta)
     cdef vector[physpoint] grad_lens_arr = vector[physpoint](theta_N*theta_N)
     cdef vector[physpoint] hess_lens_arr = vector[physpoint](theta_N*theta_N)		
@@ -430,7 +436,7 @@ cpdef GetLensGradArrs(vector[double] lens_arr,
 
 # Data Conversion to python
 cpdef ConvertFreqStatPnts(vector[vector[imagepoint]] freqpnts):
-
+    "Convert the C++ vector of the 5 image parameters into 5 python compatible arrays."
     cdef int iteri, iterj
     cdef int Npnts = freqpnts.size()
     cdef int Nimages 
@@ -455,7 +461,7 @@ cpdef ConvertFreqStatPnts(vector[vector[imagepoint]] freqpnts):
 
 
 cpdef ConvertPhyspointVec(vector[physpoint] vec_):
-
+    "Convert the C++ vector into 2 python compatible arrays."
     cdef int iteri
     cdef int Npnts = vec_.size()
     cdef physpoint temppnt

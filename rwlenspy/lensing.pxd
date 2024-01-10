@@ -1,4 +1,3 @@
-
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libcpp.complex cimport complex
