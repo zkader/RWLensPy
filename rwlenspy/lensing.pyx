@@ -74,7 +74,7 @@ cpdef vector[complex] RunUnitlessTransferFunc(
     SetGradientArrs( theta_N, theta_step, lens_arr, grad_lens_arr, hess_lens_arr)
     
     cdef int freq_mod = freq_N//10
-    
+
     reset() # reset counter and init lock        
     with nogil, parallel():
         for freq_ii in prange(freq_N):
@@ -278,9 +278,9 @@ cpdef GetUnitlessFreqStationaryPoints(vector[double] lens_arr,
     SetGradientArrs( theta_N, theta_step, lens_arr, grad_lens_arr, hess_lens_arr)
     
     cdef int freq_mod = freq_N//10
+    cdef size_t vsize 
     
-    reset() # reset counter and init lock            
-    
+    reset() # reset counter,time,memory and init lock            
     with nogil, parallel():
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
@@ -288,7 +288,9 @@ cpdef GetUnitlessFreqStationaryPoints(vector[double] lens_arr,
             GetFreqImage(theta_step, theta_N, theta_min, freq_val, freq_power, lens_arr, grad_lens_arr,\
                          hess_lens_arr,	geom_const, lens_const, beta_vec, freqpnts[freq_ii])
 
-            report(freq_mod,freq_N)
+            vsize = sizeof(imagepoint) * freqpnts[freq_ii].capacity() + sizeof(freqpnts[freq_ii])
+            report_withsize(freq_mod,freq_N,vsize)
+            
     destroy() # release lock
    
     cdef vector[double] thetaxs_,thetays_,freqs_
@@ -347,6 +349,7 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
     SetGradientArrs( theta_N, theta_step, lens_arr_2, grad_lens_arr_2, hess_lens_arr_2)
         
     cdef int freq_mod = freq_N//10
+    cdef size_t vsize 
     
     reset() # reset counter and init lock                    
     with nogil, parallel():
@@ -358,7 +361,8 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
                                    beta_1_vec, freq_power_2, lens_arr_2, grad_lens_arr_2, hess_lens_arr_2,\
                                    geom_const_2, lens_const_2, beta_2_vec, freqpnts[freq_ii])  
             
-            report(freq_mod,freq_N)
+            vsize = sizeof(imagepoint) * freqpnts[freq_ii].capacity() + sizeof(freqpnts[freq_ii])  
+            report_withsize(freq_mod,freq_N,vsize)
     destroy() # release lock
                
     cdef vector[double] thetaxs_,thetays_,freqs_
@@ -409,6 +413,7 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
     SetGradientArrs( theta_N, theta_step, lens_arr_1, grad_lens_arr_1, hess_lens_arr_1)
             
     cdef int freq_mod = freq_N//10
+    cdef size_t vsize     
     
     reset() # reset counter and init lock            
         
@@ -431,8 +436,9 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
                                       mass,\
                                       beta_2_vec,\
                                       freqpnts[freq_ii])
-   
-            report(freq_mod,freq_N)
+
+            vsize = sizeof(imagepoint) * freqpnts[freq_ii].capacity() + sizeof(freqpnts[freq_ii])
+            report_withsize(freq_mod,freq_N,vsize)
     destroy() # release lock
    
     cdef vector[double] thetaxs_,thetays_,freqs_
