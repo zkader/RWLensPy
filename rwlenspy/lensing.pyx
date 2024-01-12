@@ -73,6 +73,9 @@ cpdef vector[complex] RunUnitlessTransferFunc(
 
     SetGradientArrs( theta_N, theta_step, lens_arr, grad_lens_arr, hess_lens_arr)
     
+    cdef int freq_mod = freq_N//10
+    
+    reset() # reset counter and init lock        
     with nogil, parallel():
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
@@ -81,7 +84,9 @@ cpdef vector[complex] RunUnitlessTransferFunc(
                                                 freq_val, freq_ref, freq_power, lens_arr, grad_lens_arr,\
                                                hess_lens_arr, geom_const, lens_const, \
                                                beta_vec)
-
+            report(freq_mod,freq_N)
+    destroy() # release lock
+    
     return tfunc
 
 cpdef vector[complex] RunPlasmaGravTransferFunc(
@@ -126,6 +131,9 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
     
     cdef double lens_scaling = lens_scale / eins
     
+    cdef int freq_mod = freq_N//10
+    
+    reset() # reset counter and init lock            
     with nogil, parallel():
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
@@ -134,6 +142,8 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
                                                       freq_ref, freq_power, lens_arr, grad_lens_arr,\
                                                       hess_lens_arr, geom_const, lens_const, mass,\
                                                       beta_E_vec, beta_vec, lens_scaling)
+            report(freq_mod,freq_N)
+    destroy() # release lock            
     return tfunc
 
 cpdef vector[complex] RunMultiplaneTransferFunc(
@@ -183,6 +193,9 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
     
     cdef double lens_scaling = lens_scale_1 / lens_scale_2
     
+    cdef int freq_mod = freq_N//10
+    
+    reset() # reset counter and init lock            
     with nogil, parallel():
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
@@ -193,6 +206,8 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
                                 lens_arr_2, grad_lens_arr_2, hess_lens_arr_2, geom_const_2,\
                                 lens_const_2, lens_scaling, beta_1_vec, beta_2_vec) 
             
+            report(freq_mod,freq_N)
+    destroy() # release lock            
     return tfunc
 
 cpdef vector[complex] RunGravTransferFunc(
@@ -213,11 +228,17 @@ cpdef vector[complex] RunGravTransferFunc(
     cdef int freq_ii
     cdef double freq_val
     
+    cdef int freq_mod = freq_N//10
+    
+    reset() # reset counter and init lock            
     with nogil, parallel():
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
             
             tfunc[freq_ii] = GetPMGravTransferFuncVal( freq_val, mass, beta_vec)
+
+            report(freq_mod,freq_N)
+    destroy() # release lock
             
     return tfunc
 
@@ -256,6 +277,10 @@ cpdef GetUnitlessFreqStationaryPoints(vector[double] lens_arr,
 
     SetGradientArrs( theta_N, theta_step, lens_arr, grad_lens_arr, hess_lens_arr)
     
+    cdef int freq_mod = freq_N//10
+    
+    reset() # reset counter and init lock            
+    
     with nogil, parallel():
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
@@ -263,6 +288,9 @@ cpdef GetUnitlessFreqStationaryPoints(vector[double] lens_arr,
             GetFreqImage(theta_step, theta_N, theta_min, freq_val, freq_power, lens_arr, grad_lens_arr,\
                          hess_lens_arr,	geom_const, lens_const, beta_vec, freqpnts[freq_ii])
 
+            report(freq_mod,freq_N)
+    destroy() # release lock
+   
     cdef vector[double] thetaxs_,thetays_,freqs_
     cdef vector[complex] magarr
     cdef vector[double] delayarr
@@ -318,6 +346,9 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
     
     SetGradientArrs( theta_N, theta_step, lens_arr_2, grad_lens_arr_2, hess_lens_arr_2)
         
+    cdef int freq_mod = freq_N//10
+    
+    reset() # reset counter and init lock                    
     with nogil, parallel():
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
@@ -327,6 +358,9 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
                                    beta_1_vec, freq_power_2, lens_arr_2, grad_lens_arr_2, hess_lens_arr_2,\
                                    geom_const_2, lens_const_2, beta_2_vec, freqpnts[freq_ii])  
             
+            report(freq_mod,freq_N)
+    destroy() # release lock
+               
     cdef vector[double] thetaxs_,thetays_,freqs_
     cdef vector[complex] magarr
     cdef vector[double] delayarr
@@ -374,6 +408,10 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
     theta_step = (theta_max - theta_min) /  (theta_N - 1)
     SetGradientArrs( theta_N, theta_step, lens_arr_1, grad_lens_arr_1, hess_lens_arr_1)
             
+    cdef int freq_mod = freq_N//10
+    
+    reset() # reset counter and init lock            
+        
     with nogil, parallel():
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
@@ -393,7 +431,10 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
                                       mass,\
                                       beta_2_vec,\
                                       freqpnts[freq_ii])
-
+   
+            report(freq_mod,freq_N)
+    destroy() # release lock
+   
     cdef vector[double] thetaxs_,thetays_,freqs_
     cdef vector[complex] magarr
     cdef vector[double] delayarr
