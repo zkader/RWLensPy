@@ -1,9 +1,67 @@
-
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libcpp.complex cimport complex
 
 ctypedef unsigned int size_t
+
+cdef extern from * nogil:
+    r"""
+    #include <iostream>    
+    #include <omp.h>
+
+    static omp_lock_t cnt_lock;
+    static int cnt = 0;
+    static double start_time = omp_get_wtime();
+    static size_t total_bytes = 0;
+    
+    void reset(){
+        omp_init_lock(&cnt_lock);
+        cnt = 0;
+        start_time = omp_get_wtime();
+        total_bytes = 0;
+    }
+    
+    void destroy(){
+        omp_destroy_lock(&cnt_lock);
+    }
+
+    void report(int mod, int totalcnts){
+        omp_set_lock(&cnt_lock);
+        // start protected code:
+        cnt++;
+        
+        //std::cout << "debug| " << progress << std::endl;
+        if(cnt % mod == 0){
+            double progress = (double)cnt / (double)totalcnts;    
+            double check_time = omp_get_wtime() - start_time;
+            std::cout << "Progress : " << progress*100.0 << " % ";
+            std::cout << "| Time Elapsed : " << check_time << " s " << std::endl;
+        }
+        // end protected code block
+        omp_unset_lock(&cnt_lock);
+    }
+    
+    void report_withsize(int mod, int totalcnts,size_t v_size){
+        omp_set_lock(&cnt_lock);
+        // start protected code:
+        cnt++;
+        total_bytes = total_bytes + v_size;
+        
+        if(cnt % mod == 0){
+            double progress = (double)cnt / (double)totalcnts;    
+            double check_time = omp_get_wtime() - start_time;
+            std::cout << "Progress : " << progress*100.0 << " % ";
+            std::cout << "| Time Elapsed : " << check_time << " s ";
+            std::cout << "| Memory Used : "<< total_bytes << " Bytes" << std::endl;
+        }
+        // end protected code block
+        omp_unset_lock(&cnt_lock);
+    }
+    """
+    void reset()
+    void destroy()
+    void report(int mod,int totalcnts)
+    void report_withsize(int mod, int totalcnts,size_t v_size)
 
 cdef extern from "rwlens.h":
     cdef struct imagepoint:

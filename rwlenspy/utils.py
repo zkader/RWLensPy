@@ -1,6 +1,4 @@
-import sys
-sys.path.insert(0,"/home/zkader/coderepo/RWLensPy/")
-
+"""Utility Functions for generating lensing functions."""
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm,SymLogNorm
@@ -12,6 +10,7 @@ from astropy import cosmology
 
 def FermatPotential(rx,ry,sx,sy,D_eff,lens_func,**funcargs):
     """
+    Get the Fermat Potential for a given lensing function.
 
     """
     Geom_del = (D_eff/c.c ).to(u.s).value*0.5*((rx-sx)**2 + (ry-sy)**2)

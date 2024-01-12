@@ -1,3 +1,4 @@
+// Imports
 #include <iostream>
 #include <vector>
 #include <complex>
@@ -7,10 +8,11 @@
 #include <cfloat>
 #include <assert.h>
 
+// Global Constants Definition
 const double pi = 3.14159265358979323846;
-
 const std::complex<double> I (0,1.0);
 
+// Data Types Definition
 typedef struct imagepoint {
 	double valx;
 	double valy;
@@ -24,9 +26,10 @@ typedef struct physpoint {
 	double valy = 0.0;
 } physpoint;
 
+// Functions
 std::complex<double> GetTransferFuncVal(
 	const double theta_step,
-	const int theta_NM, 
+	const int theta_N, 
 	const double theta_min,		
 	const double freq,
 	const double freq_ref,    
