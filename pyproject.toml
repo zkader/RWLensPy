@@ -9,7 +9,7 @@ readme = "README.md"
 script = "build.py"
 
 [tool.poetry.dependencies]
-python = ">=3.7,<3.10"
+python = ">=3.8"
 numpy = ">=1.21.0"
 scipy = ">=1.7.0"
 Cython = ">=0.29.33"
