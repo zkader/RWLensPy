@@ -44,7 +44,7 @@ std::complex<double> GetTransferFuncVal(
 
 std::complex<double> GetTwoPlaneTransferFuncVal(
 	const double theta_step,
-	const int theta_NM, 
+	const int theta_N, 
 	const double theta_min,		
 	const double freq,
 	const double freq_ref,    
@@ -67,7 +67,7 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
 
 std::complex<double> GetPlanePMGravTransferFuncVal(
 	const double theta_step,
-	const int theta_NM, 
+	const int theta_N, 
 	const double theta_min,		
 	const double freq,
 	const double freq_ref,    
@@ -148,7 +148,7 @@ void GetPlaneToPMGravFreqImage(
 bool IsStationary(
 	const int itheta,
 	const int jtheta,
-	const int theta_NM,
+	const int theta_N,
 	const double theta_step,
 	const double theta_min,	
 	const std::vector<physpoint> &dlens_arr,
@@ -159,7 +159,7 @@ bool IsStationary(
 std::complex<double> GetMag(
 	const int itheta,
 	const int jtheta,
-	const int theta_NM,
+	const int theta_N,
 	const std::vector<physpoint> &mag_arr,
 	const double lens_param
 );
@@ -183,7 +183,7 @@ std::complex<double> GetImgVal(
 void SetGeometricDelayArr(
 	const double theta_min,
 	const double theta_max,
-	const int theta_NM,
+	const int theta_N,
 	const double beta_x,
 	const double beta_y,
 	std::vector<double> &geom_arr
@@ -192,7 +192,7 @@ void SetGeometricDelayArr(
 void SetFermatPotential(
 	const double geom_factor,
 	const double lens_factor,
-    const int theta_NM,
+    const int theta_N,
     const double freq,    
 	const std::vector<double> &geom_arr,
 	const std::vector<double> &lens_arr,
@@ -200,7 +200,7 @@ void SetFermatPotential(
 );
 
 void SetGradientArrs(
-    const int theta_NM,
+    const int theta_N,
     const double theta_step,    
 	const std::vector<double> &lens_arr,
 	std::vector<physpoint> &dlens_arr ,

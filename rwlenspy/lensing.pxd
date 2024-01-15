@@ -76,7 +76,7 @@ cdef extern from "rwlens.h":
         double valy
 
     double complex GetTransferFuncVal(\
-    double theta_step, int theta_NM, \
+    double theta_step, int theta_N, \
     double theta_min, double freq, \
     double freq_ref, double freq_power,\
     vector[double]& lens_arr, \
@@ -87,7 +87,7 @@ cdef extern from "rwlens.h":
 
     double complex GetTwoPlaneTransferFuncVal(
 	double theta_step,
-	int theta_NM, 
+	int theta_N, 
 	double theta_min,		
 	double freq,
 	double freq_ref,    
@@ -109,7 +109,7 @@ cdef extern from "rwlens.h":
 
     double complex GetPlanePMGravTransferFuncVal(
 	double theta_step,
-	int theta_NM, 
+	int theta_N, 
 	double theta_min,		
 	double freq,
 	double freq_ref,    
@@ -131,7 +131,7 @@ cdef extern from "rwlens.h":
     
     double complex GetGravTransferFuncVal(
 	double theta_step,
-	int theta_NM, 
+	int theta_N, 
 	double theta_min,
 	double freq,
 	vector[double]& fermat_pot,
@@ -186,11 +186,11 @@ cdef extern from "rwlens.h":
         physpoint betaE_v,
         vector[imagepoint]& freq_images) nogil
     
-    double complex GetMag(int itheta, int jtheta, int theta_NM,\
+    double complex GetMag(int itheta, int jtheta, int theta_N,\
                           double theta_step, vector[double]& fermat_pot,\
                           double geom_factor) nogil
 
-    bint IsStationary(int itheta, int jtheta, int theta_NM,\
+    bint IsStationary(int itheta, int jtheta, int theta_N,\
                       double theta_step, double theta_min, \
                       vector[physpoint]& dlens_arr, double lens_param,\
                       physpoint betav ) nogil
@@ -201,14 +201,14 @@ cdef extern from "rwlens.h":
                              vector[physpoint]& ddlens_arr, double geom_fac,\
                              double lens_fac, physpoint betav ) nogil
 
-    void SetGeometricDelayArr(double theta_min, double theta_max, int theta_NM, \
+    void SetGeometricDelayArr(double theta_min, double theta_max, int theta_N, \
                              double beta_x, double beta_y, vector[double]& geom_arr) nogil
 
     void SetFermatPotential(double geom_factor, double lens_factor, \
-                            int theta_NM, double freq,\
+                            int theta_N, double freq,\
                             vector[double]& geom_arr, vector[double]& lens_arr,\
                             vector[double]& fermat_pot) nogil
 
-    void SetGradientArrs( int theta_NM, double theta_step,    \
+    void SetGradientArrs( int theta_N, double theta_step,    \
                         vector[double]& lens_arr, vector[physpoint]& dlens_arr, \
                         vector[physpoint]& ddlens_arr)

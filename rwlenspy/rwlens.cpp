@@ -43,7 +43,7 @@ std::complex<double> GetTransferFuncVal(
 
 std::complex<double> GetTwoPlaneTransferFuncVal(
 	const double theta_step,
-	const int theta_NM, 
+	const int theta_N, 
 	const double theta_min,		
 	const double freq,
 	const double freq_ref,    
@@ -74,12 +74,12 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
     
     physpoint beta2;
     
-	for(int itheta = 2; itheta < theta_NM - 2; itheta++) 
+	for(int itheta = 2; itheta < theta_N - 2; itheta++) 
     {
-        for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
+        for(int jtheta = 2; jtheta < theta_N - 2; jtheta++)
         {
             // check if there exists a stationary point in the grid cell        
-			if( IsStationary( itheta, jtheta, theta_NM,
+			if( IsStationary( itheta, jtheta, theta_N,
 							theta_step, theta_min,	
 							dlens_arr1, lens_param1, beta1 )){
 				theta1_x  = theta_step * jtheta + theta_min;				    			
@@ -91,23 +91,23 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
                 if(freq_power1 != 0.0)
                 {
                     geomphase =  2 * pi * (freq) * geomdelay1;
-                    phase1 = geomphase +  2 * pi * freq * lens_fac1 * ( pow( freq_ref,freq_power1) - pow( freq,freq_power1) )* lens_arr1[jtheta + theta_NM * itheta] ;
+                    phase1 = geomphase +  2 * pi * freq * lens_fac1 * ( pow( freq_ref,freq_power1) - pow( freq,freq_power1) )* lens_arr1[jtheta + theta_N * itheta] ;
                 }else
                 {
-                    phase1 = geomdelay1 + lens_fac1 * pow( freq,freq_power1) * lens_arr1[jtheta + theta_NM * itheta] ;
+                    phase1 = geomdelay1 + lens_fac1 * pow( freq,freq_power1) * lens_arr1[jtheta + theta_N * itheta] ;
                     phase1 = phase1 * 2 * pi * freq ;                                        
                 }            
-				mag1 = GetMag(itheta, jtheta, theta_NM, ddlens_arr1, lens_param1);				
+				mag1 = GetMag(itheta, jtheta, theta_N, ddlens_arr1, lens_param1);				
                 
                 beta2.valx = multilens_12_scale*theta1_x + lens12_offset.valx;
                 beta2.valy = multilens_12_scale*theta1_y + lens12_offset.valy;
                 
                 phase2 = 0.0; 
-                for(int ktheta = 2; ktheta < theta_NM - 2; ktheta++) 
+                for(int ktheta = 2; ktheta < theta_N - 2; ktheta++) 
                 {
-                    for(int ltheta = 2; ltheta < theta_NM - 2; ltheta++)
+                    for(int ltheta = 2; ltheta < theta_N - 2; ltheta++)
                     {
-                        if( IsStationary( ktheta, ltheta, theta_NM,
+                        if( IsStationary( ktheta, ltheta, theta_N,
                                         theta_step, theta_min,	
                                         dlens_arr2, lens_param2, beta2 ))
                         {
@@ -119,13 +119,13 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
                             if(freq_power2 != 0.0)
                             {
                                 geomphase =  2 * pi * (freq) * geomdelay2;
-                                phase2 = geomphase +  2 * pi * freq * lens_fac2 * ( pow( freq_ref,freq_power2) - pow( freq,freq_power2) )* lens_arr2[ktheta + theta_NM * ltheta] ;
+                                phase2 = geomphase +  2 * pi * freq * lens_fac2 * ( pow( freq_ref,freq_power2) - pow( freq,freq_power2) )* lens_arr2[ktheta + theta_N * ltheta] ;
                             }else
                             {
-                                phase2 = geomdelay2 + lens_fac2 * lens_arr2[ktheta + theta_NM * ltheta] ;
+                                phase2 = geomdelay2 + lens_fac2 * lens_arr2[ktheta + theta_N * ltheta] ;
                                 phase2 = phase2 * 2 * pi * freq ;                                        
                             }            
-                            mag2 = GetMag(ktheta, ltheta, theta_NM, ddlens_arr2, lens_param2);				
+                            mag2 = GetMag(ktheta, ltheta, theta_N, ddlens_arr2, lens_param2);				
               
                             tfunc_val =  tfunc_val + std::conj(mag2)*std::conj(mag1)* std::complex<double>( cos(phase1+phase2), sin(phase1+phase2));				
                         }
@@ -140,7 +140,7 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
 
 std::complex<double> GetPlanePMGravTransferFuncVal(
 	const double theta_step,
-	const int theta_NM, 
+	const int theta_N, 
 	const double theta_min,		
 	const double freq,
 	const double freq_ref,    
@@ -164,11 +164,11 @@ std::complex<double> GetPlanePMGravTransferFuncVal(
 	physpoint sourcepos,imagepos;
     std::complex<double> mag, imgmag;
     
-	for(int itheta = 2; itheta < theta_NM - 2; itheta++) 
+	for(int itheta = 2; itheta < theta_N - 2; itheta++) 
     {
-        for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
+        for(int jtheta = 2; jtheta < theta_N - 2; jtheta++)
         {
-			if( IsStationary( itheta, jtheta, theta_NM,
+			if( IsStationary( itheta, jtheta, theta_N,
 							theta_step, theta_min,	
 							dlens_arr, lens_param, betav )){
 				theta_x  = theta_step * jtheta + theta_min;				    			
@@ -179,14 +179,14 @@ std::complex<double> GetPlanePMGravTransferFuncVal(
                 if(freq_power != 0.0)
                 {
                     double geomphase =  2 * pi * (freq) * geomdelay;
-                    phase = geomphase +  2 * pi * freq * lens_fac * ( pow( freq_ref,freq_power) - pow( freq,freq_power) )* lens_arr[jtheta + theta_NM * itheta] ;
+                    phase = geomphase +  2 * pi * freq * lens_fac * ( pow( freq_ref,freq_power) - pow( freq,freq_power) )* lens_arr[jtheta + theta_N * itheta] ;
                 }else
                 {
-                    phase = geomdelay + lens_fac * lens_arr[jtheta + theta_NM * itheta] ;
+                    phase = geomdelay + lens_fac * lens_arr[jtheta + theta_N * itheta] ;
                     phase = phase * 2 * pi * freq ;                                        
                 }                
             
-				mag = GetMag(itheta, jtheta, theta_NM, ddlens_arr, lens_param);
+				mag = GetMag(itheta, jtheta, theta_N, ddlens_arr, lens_param);
 												
 				sourcepos.valx = multilens_scale*theta_x + betaE_v.valx;				
 				sourcepos.valy = multilens_scale*theta_y + betaE_v.valy;
@@ -451,7 +451,7 @@ void GetPlaneToPMGravFreqImage(
 bool IsStationary(
 	const int itheta,
 	const int jtheta,
-	const int theta_NM,
+	const int theta_N,
 	const double theta_step,
 	const double theta_min,	
 	const std::vector<physpoint> &dlens_arr,
@@ -459,7 +459,7 @@ bool IsStationary(
 	const physpoint betav ) 
 {
     // determine if there is a stationary point within the grid cell
-	physpoint pnt_cntr = dlens_arr[jtheta + theta_NM * itheta];
+	physpoint pnt_cntr = dlens_arr[jtheta + theta_N * itheta];
     
     // check for infinites
     if(std::isinf(pnt_cntr.valx) || std::isinf(pnt_cntr.valy) ) {return false;}
@@ -471,10 +471,10 @@ bool IsStationary(
 	if((fx_cntr == 0.0) && (fy_cntr == 0.0)){return true;}	
 
     // check for if gradient is 0 along x direction first
-	physpoint pnt_left = dlens_arr[jtheta - 1 + theta_NM * itheta];	
+	physpoint pnt_left = dlens_arr[jtheta - 1 + theta_N * itheta];	
     if(std::isinf(pnt_left.valx) || std::isinf(pnt_left.valy) ) {return false;}   	    
     
-	physpoint pnt_right = dlens_arr[jtheta + 1 + theta_NM * itheta];    
+	physpoint pnt_right = dlens_arr[jtheta + 1 + theta_N * itheta];    
     if(std::isinf(pnt_right.valx) || std::isinf(pnt_right.valy) ) {return false;}
     	
 	double fx_left = theta_step * (jtheta - 1) + theta_min + lens_param * pnt_left.valx - betav.valx;	
@@ -483,10 +483,10 @@ bool IsStationary(
 	if( StatCellCheck(fx_cntr,fx_left) || StatCellCheck(fx_cntr,fx_right))
 	{
         // check for if gradient is 0 along y direction second        
-		physpoint pnt_up = dlens_arr[jtheta + theta_NM * (itheta - 1)];
+		physpoint pnt_up = dlens_arr[jtheta + theta_N * (itheta - 1)];
 	    if(std::isinf(pnt_up.valx) || std::isinf(pnt_up.valy) ) {return false;}
 		
-		physpoint pnt_down = dlens_arr[jtheta + theta_NM * (itheta + 1 )];
+		physpoint pnt_down = dlens_arr[jtheta + theta_N * (itheta + 1 )];
 	    if(std::isinf(pnt_down.valx) || std::isinf(pnt_down.valy) ) {return false;}		
 	
 		double fy_up = theta_step * (itheta - 1) + theta_min + lens_param * pnt_up.valy - betav.valy;	
@@ -502,16 +502,16 @@ bool IsStationary(
     return false;
 }
 
-std::complex<double> GetMag(const int itheta, const int jtheta, const int theta_NM, const std::vector<physpoint> &mag_arr, const double lens_param)
+std::complex<double> GetMag(const int itheta, const int jtheta, const int theta_N, const std::vector<physpoint> &mag_arr, const double lens_param)
 {
     // Get the magnification of the lens through the hessian
 	std::complex<double> magvalcntr, magvalup, magvaldown, magvalleft, magvalright;	
 	
-	physpoint maghesscntr = mag_arr[jtheta + theta_NM * itheta];
-	physpoint maghessup = mag_arr[jtheta + theta_NM * (itheta-1)];
-	physpoint maghessdown = mag_arr[jtheta + theta_NM * (itheta+1)];
-	physpoint maghessleft = mag_arr[(jtheta-1) + theta_NM * itheta];
-	physpoint maghessright = mag_arr[(jtheta+1) + theta_NM * itheta];
+	physpoint maghesscntr = mag_arr[jtheta + theta_N * itheta];
+	physpoint maghessup = mag_arr[jtheta + theta_N * (itheta-1)];
+	physpoint maghessdown = mag_arr[jtheta + theta_N * (itheta+1)];
+	physpoint maghessleft = mag_arr[(jtheta-1) + theta_N * itheta];
+	physpoint maghessright = mag_arr[(jtheta+1) + theta_N * itheta];
     	
     // valy is det(lens) and valx is trace(lens)
 	// calculate the hessiant at all grid boundaries
@@ -581,22 +581,22 @@ std::complex<double> GetImgVal(
 void SetGeometricDelayArr(
 	const double theta_min,
 	const double theta_max,
-	const int theta_NM,
+	const int theta_N,
 	const double beta_x,
 	const double beta_y,
 	std::vector<double> &geom_arr
 )
 {
     // Set the values of the geometric delay on a grid
-	assert ( geom_arr.size() == theta_NM * theta_NM);	
+	assert ( geom_arr.size() == theta_N * theta_N);	
 	
-	for(int arr_ii = 0; arr_ii < theta_NM; arr_ii++)
+	for(int arr_ii = 0; arr_ii < theta_N; arr_ii++)
 	{
-		double theta_x = (theta_max - theta_min) / (theta_NM - 1) * arr_ii + theta_min;				
-		for(int arr_jj = 0; arr_jj < theta_NM; arr_jj++)
+		double theta_x = (theta_max - theta_min) / (theta_N - 1) * arr_ii + theta_min;				
+		for(int arr_jj = 0; arr_jj < theta_N; arr_jj++)
 		{
-			double theta_y = (theta_max - theta_min) / (theta_NM - 1) * arr_jj + theta_min;
-            int arr_ind = arr_jj + arr_ii * theta_NM;
+			double theta_y = (theta_max - theta_min) / (theta_N - 1) * arr_jj + theta_min;
+            int arr_ind = arr_jj + arr_ii * theta_N;
 			geom_arr[arr_ind] = 0.5*( ( theta_x - beta_x ) * (theta_x - beta_x)  + (theta_y - beta_y) * (theta_y - beta_y) );
 		}
 	}
@@ -605,29 +605,29 @@ void SetGeometricDelayArr(
 void SetFermatPotential(
 	const double geom_factor,
 	const double lens_factor,
-    const int theta_NM,
+    const int theta_N,
     const double freq,
 	const std::vector<double> &geom_arr,
 	const std::vector<double> &lens_arr,
 	std::vector<double> &fermat_pot )
 {
     // Set the values of the Fermat potential
-	assert ( geom_arr.size() == theta_NM*theta_NM);    
+	assert ( geom_arr.size() == theta_N*theta_N);    
 	assert ( geom_arr.size() == lens_arr.size());
 	assert ( geom_arr.size() == fermat_pot.size());
 	    
-    for(int itheta = 0; itheta < theta_NM ; itheta++)
+    for(int itheta = 0; itheta < theta_N ; itheta++)
     {
-        for(int jtheta = 0; jtheta < theta_NM ; jtheta++)
+        for(int jtheta = 0; jtheta < theta_N ; jtheta++)
         {
-            int arr_ind = jtheta + theta_NM * itheta;
+            int arr_ind = jtheta + theta_N * itheta;
             fermat_pot[arr_ind] = geom_factor*geom_arr[arr_ind] + lens_factor*lens_arr[arr_ind];                
         }
     }
 } 
 
 void SetGradientArrs(
-    const int theta_NM,
+    const int theta_N,
     const double theta_step,    
 	const std::vector<double> &lens_arr,
 	std::vector<physpoint> &dlens_arr ,
@@ -635,19 +635,19 @@ void SetGradientArrs(
 ){  
     // Calculate the gradient and determinant of the hessian for a lens 
 	assert ( lens_arr.size() == dlens_arr.size());
-	assert ( lens_arr.size() == theta_NM*theta_NM);
+	assert ( lens_arr.size() == theta_N*theta_N);
 	    
 	// note: 2 points lost for hessian for finite difference calcuation
-    for(int itheta = 2; itheta < theta_NM - 2; itheta++)
+    for(int itheta = 2; itheta < theta_N - 2; itheta++)
     {
-        for(int jtheta = 2; jtheta < theta_NM - 2; jtheta++)
+        for(int jtheta = 2; jtheta < theta_N - 2; jtheta++)
         {
-            int arr_ind = jtheta + theta_NM * itheta;
+            int arr_ind = jtheta + theta_N * itheta;
             
 		    // central difference
-			double Ldy = (lens_arr[jtheta  + theta_NM * (itheta + 1)] - lens_arr[jtheta  + theta_NM * (itheta - 1)]
+			double Ldy = (lens_arr[jtheta  + theta_N * (itheta + 1)] - lens_arr[jtheta  + theta_N * (itheta - 1)]
 						)/ (2.0 * theta_step);
-			double Ldx = (lens_arr[(jtheta + 1) + theta_NM * itheta] - lens_arr[(jtheta - 1) + theta_NM * itheta]
+			double Ldx = (lens_arr[(jtheta + 1) + theta_N * itheta] - lens_arr[(jtheta - 1) + theta_N * itheta]
 						)/ (2.0 * theta_step);
 						
 			physpoint gradpnt;
@@ -658,28 +658,28 @@ void SetGradientArrs(
             dlens_arr[arr_ind] = gradpnt;            
             
             // Hessian calculation
-            double fyy = ( -lens_arr[(jtheta) + theta_NM * (itheta+2)]
-				+16.0*lens_arr[(jtheta) + theta_NM * (itheta+1)]
-				-30.0*lens_arr[(jtheta) + theta_NM * (itheta)]
-				+16.0*lens_arr[(jtheta) + theta_NM * (itheta-1)]
-				-lens_arr[(jtheta) + theta_NM * (itheta-2)]	
+            double fyy = ( -lens_arr[(jtheta) + theta_N * (itheta+2)]
+				+16.0*lens_arr[(jtheta) + theta_N * (itheta+1)]
+				-30.0*lens_arr[(jtheta) + theta_N * (itheta)]
+				+16.0*lens_arr[(jtheta) + theta_N * (itheta-1)]
+				-lens_arr[(jtheta) + theta_N * (itheta-2)]	
 				)/ (12.0 * theta_step * theta_step);
 
-			double fxx = ( -lens_arr[(jtheta+2) + theta_NM * (itheta)]
-				+16.0*lens_arr[(jtheta+1) + theta_NM * (itheta)]
-				-30.0*lens_arr[(jtheta) + theta_NM * (itheta)]
-				+16.0*lens_arr[(jtheta-1) + theta_NM * (itheta)]
-				-lens_arr[(jtheta-2) + theta_NM * (itheta)]	
+			double fxx = ( -lens_arr[(jtheta+2) + theta_N * (itheta)]
+				+16.0*lens_arr[(jtheta+1) + theta_N * (itheta)]
+				-30.0*lens_arr[(jtheta) + theta_N * (itheta)]
+				+16.0*lens_arr[(jtheta-1) + theta_N * (itheta)]
+				-lens_arr[(jtheta-2) + theta_N * (itheta)]	
 				)/ (12.0 * theta_step * theta_step);
 
-			double fxy = ( -lens_arr[(jtheta+2) + theta_NM * (itheta+2)]
-				+lens_arr[(jtheta-2) + theta_NM * (itheta+2)]
-				+lens_arr[(jtheta+2) + theta_NM * (itheta-2)]
-				-lens_arr[(jtheta-2) + theta_NM * (itheta-2)]	
-				+16.0*lens_arr[(jtheta+1) + theta_NM * (itheta+1)]
-				-16.0*lens_arr[(jtheta-1) + theta_NM * (itheta+1)]
-				-16.0*lens_arr[(jtheta+1) + theta_NM * (itheta-1)]
-				+16.0*lens_arr[(jtheta-1) + theta_NM * (itheta-1)]
+			double fxy = ( -lens_arr[(jtheta+2) + theta_N * (itheta+2)]
+				+lens_arr[(jtheta-2) + theta_N * (itheta+2)]
+				+lens_arr[(jtheta+2) + theta_N * (itheta-2)]
+				-lens_arr[(jtheta-2) + theta_N * (itheta-2)]	
+				+16.0*lens_arr[(jtheta+1) + theta_N * (itheta+1)]
+				-16.0*lens_arr[(jtheta-1) + theta_N * (itheta+1)]
+				-16.0*lens_arr[(jtheta+1) + theta_N * (itheta-1)]
+				+16.0*lens_arr[(jtheta-1) + theta_N * (itheta-1)]
 			)/ (48.0 * theta_step * theta_step);
             
             
