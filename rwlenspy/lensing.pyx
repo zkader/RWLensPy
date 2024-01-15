@@ -2,39 +2,15 @@
 # distutils: sources = rwlenspy/rwlens.cpp
 
 import numpy as np
-from time import time
-
 cimport numpy as np
 cimport cython
-
 from cython.parallel cimport parallel, prange, threadid
-
 cimport openmp
 
 np.import_array()
 
 cdef double PI_ = 3.14159265358979323846
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cpdef np.ndarray[np.double_t, ndim=2] GetPoints(double muMin,
-                double muMax,
-                int NM,
-                ):
-    
-    cdef int sizeMu = NM*NM
-    cdef np.ndarray[np.double_t, ndim=2] arr = np.zeros([sizeMu,2], dtype=np.double)
-    cdef int iMu, jMu, indMu
-
-    with nogil, parallel():
-        for indMu in prange(sizeMu):
-            jMu = indMu % NM
-            iMu = (indMu - jMu)//NM
-
-            arr[indMu,0] = (muMax - muMin) / (NM - 1) * iMu + muMin
-            arr[indMu,1] = (muMax - muMin) / (NM - 1) * jMu + muMin
-
-    return arr
 
 """
 ===================================================================
@@ -522,3 +498,37 @@ cpdef ConvertPhyspointVec(vector[physpoint] vec_):
         yvals.push_back(temppnt.valy)
 
     return xvals,yvals
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef np.ndarray[np.double_t, ndim=2] GetPoints(double theta_min,
+                double theta_max,
+                int theta_N,
+                ):
+    """Get the coordinate grid point values of the array.
+
+    Get the X and Y values of a square NxN grid. The points 
+    are returned in an array of shape (N*N,2), where 0 and 1
+    index X and Y, respectively. 
+
+    Args:
+        theta_min (double): The minimum X and Y value.
+        theta_max (double): The maximum X and Y value.
+        theta_N (int): The number of point along one axis.
+
+    Return:
+        np.ndarray: An array containing grid values of size (N*N)
+    """    
+    cdef int sizeNN = theta_N*theta_N
+    cdef np.ndarray[np.double_t, ndim=2] arr = np.zeros([sizeNN,2], dtype=np.double)
+    cdef int ii, jj, thetaind
+
+    with nogil, parallel():
+        for thetaind in prange(sizeNN):
+            jj = thetaind % theta_N
+            ii = (thetaind - jj)//theta_N
+
+            arr[thetaind,0] = (theta_max - theta_min) / (theta_N - 1) * ii + theta_min
+            arr[thetaind,1] = (theta_max - theta_min) / (theta_N - 1) * jj + theta_min
+
+    return arr
