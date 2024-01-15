@@ -1,137 +1,182 @@
 """Utility Functions for generating lensing functions."""
-import numpy as np
+import typing as T
+
 import matplotlib.pyplot as plt
+import numpy as np
+import numpy.typing as npt
+from astropy import constants as const
+from astropy import units as u
+from astropy.units import Quantity
 from scipy.fft import fftfreq, fftn, ifftn
 
-from astropy import units as u
-from astropy import constants as c
 
-
-def FermatPotential(rx, ry, sx, sy, D_eff, lens_func, **funcargs):
+def FermatPotential(
+    rx: npt.ArrayLike,
+    ry: npt.ArrayLike,
+    sx: float,
+    sy: float,
+    D_eff: float,
+    lens_func: T.Callable,
+    **funcargs
+) -> npt.ArrayLike:
     """Get the Fermat potential.
 
-    _summary_
+    Get the Fermat potential for a single lens plane. A given lensing
+    function will generate the lensing array for the Fermat potential.
+    The function must be of the form func(rx,ry,**funcargs) where the
+    positions on the plane will map to the geometric delay and lensing
+    delay at that point.
 
     Args:
-        rx (_type_): _description_
-        ry (_type_): _description_
-        sx (_type_): _description_
-        sy (_type_): _description_
-        D_eff (_type_): _description_
-        lens_func (_type_): _description_
+        rx (array[float]): Array of X positions on the lens plane.
+        ry (array[float]): Array of Y positions on the lens plane.
+        sx (float): X position of the source point.
+        sy (float): Y position of the source point.
+        D_eff (float): The effective distance of the lensing system.
+        lens_func (func): The function must be of the form
+                          func(rx,ry,**funcargs).
+        **funcargs: Arguments for the lensing function.
 
     Returns:
-        _type_: _description_
+        array[float]: The Fermat potential
     """
-    Geom_del = (D_eff / c.c).to(u.s).value * 0.5 * ((rx - sx) ** 2 + (ry - sy) ** 2)
+    Geom_del = (D_eff / const.c).to(u.s).value * 0.5 * ((rx - sx) ** 2 + (ry - sy) ** 2)
+
     Lens_del = lens_func(rx, ry, **funcargs)
+
     return Geom_del + Lens_del
 
 
-def DM_lens(rx, ry, freq=1, DM=1, **funcargs):
-    """_summary_
+def DMLens(
+    rx: npt.ArrayLike,
+    ry: npt.ArrayLike,
+    freq: Quantity = 1 * u.Hz,
+    DM: Quantity = 1 * u.pc * u.cm**-3,
+    **funcargs
+):
+    """Get the lensing delay from a lens of constant DM.
 
     Args:
-        rx (_type_): _description_
-        ry (_type_): _description_
-        freq (int, optional): _description_. Defaults to 1.
-        DM (int, optional): _description_. Defaults to 1.
+        rx (array[float]): Array of X positions on the lens plane.
+        ry (array[float]): Array of Y positions on the lens plane.
+        freq (float, optional): Frequency of the observation.
+                                [Hz] Defaults to 1.
+        DM (float, optional): The DM of the lens. [pc cm^-3] Defaults to 1.
 
     Returns:
-        _type_: _description_
+        float: The lensing delay.
     """
-    r_e = c.alpha**2 * c.a0  # classical electron radius
-    plasma_const = r_e * c.c / (2 * np.pi * (freq.to(1 / u.s)) ** 2)
+    r_e = const.alpha**2 * const.a0  # classical electron radius
+    plasma_const = r_e * const.c / (2 * np.pi * (freq.to(1 / u.s)) ** 2)
     plasma_const = plasma_const.to(u.pc**-1 * u.cm**3 * u.s)
 
     return plasma_const.value * DM
 
 
-def plasma_phase_lens(rx, ry, freq=1, Ne_mat=None, **funcargs):
-    """_summary_
+def PlasmaPhaseLens(
+    rx: npt.ArrayLike,
+    ry: npt.ArrayLike,
+    freq: Quantity = 1 * u.Hz,
+    ne_mat: T.Optional[npt.ArrayLike] = None,
+    **funcargs
+):
+    """Get the lensing delay from a given electron column density array.
 
     Args:
-        rx (_type_): _description_
-        ry (_type_): _description_
-        freq (int, optional): _description_. Defaults to 1.
-        Ne_mat (_type_, optional): _description_. Defaults to None.
+        rx (array[float]): Array of X positions on the lens plane.
+        ry (array[float]): Array of Y positions on the lens plane.
+        freq (float, optional): Frequency of the observation.
+                                [Hz] Defaults to 1.
+        ne_mat (array[float], optional): _description_. Defaults to None.
+        **funcargs: Arguments for the lensing function.
 
     Returns:
-        _type_: _description_
+        array[float]: The lensing delay.
     """
-    r_e = c.alpha**2 * c.a0  # classical electron radius
-    plasma_const = r_e * c.c / (2 * np.pi * (freq.to(1 / u.s)) ** 2)
+    r_e = const.alpha**2 * const.a0  # classical electron radius
+    plasma_const = r_e * const.c / (2 * np.pi * (freq.to(1 / u.s)) ** 2)
     plasma_const = plasma_const.to(u.pc**-1 * u.cm**3 * u.s)
 
-    Ne_mat = plasma_const.value * Ne_mat
+    ne_mat = plasma_const.value * ne_mat
 
-    return Ne_mat
+    return ne_mat
 
 
-def gaussian_plasma_lens(rx, ry, freq=1, scale=1, N_e=1, **funcargs):
+def GaussianPlasmaLens(
+    rx: npt.ArrayLike,
+    ry: npt.ArrayLike,
+    freq: Quantity = 1 * u.Hz,
+    scale: float = 1,
+    DM_: float = 1,
+    **funcargs
+):
     """_summary_
 
     Args:
-        rx (_type_): _description_
-        ry (_type_): _description_
-        freq (int, optional): _description_. Defaults to 1.
+        rx (array[float]): Array of X positions on the lens plane.
+        ry (array[float]): Array of Y positions on the lens plane.
+        freq (float, optional): Frequency of the observation.
+                                [Hz] Defaults to 1.
+        ne_mat (array[float], optional): _description_. Defaults to None.
+        **funcargs: Arguments for the lensing function.
         scale (int, optional): _description_. Defaults to 1.
-        N_e (int, optional): _description_. Defaults to 1.
+        n_e (int, optional): _description_. [pc cm^-3] Defaults to 1.
 
     Returns:
         _type_: _description_
     """
-    # freq = Hz
-    # N_e = pc cm^-3
-
-    r_e = c.alpha**2 * c.a0  # classical electron radius
-    plasma_const = N_e * r_e * c.c / (2 * np.pi * (freq) ** 2)
+    r_e = const.alpha**2 * const.a0  # classical electron radius
+    plasma_const = DM_ * r_e * const.c / (2 * np.pi * (freq) ** 2)
     plasma_const = plasma_const.to(u.s).value
 
     Lens_del = plasma_const * np.exp(-0.5 * ((rx) ** 2 + (ry) ** 2) / (scale**2))
     return Lens_del
 
 
-def gaussiancircle_plasma_lens(
-    rx, ry, freq=1, scale=1, N_e=1, posx=0, posy=0, **funcargs
-):
-    """
-    freq = Hz
-    N_e = pc cm^-3
-    """
-    r_e = c.alpha**2 * c.a0  # classical electron radius
-    plasma_const = N_e * r_e * c.c / (2 * np.pi * (freq) ** 2)
-    plasma_const = plasma_const.to(u.s).value
-
-    r = np.sqrt(rx**2 + ry**2)
-    r0 = np.sqrt(posx**2 + posy**2)
-
-    Lens_del = plasma_const * np.exp(-0.5 * ((r - r0) ** 2) / (scale**2))
-    return Lens_del
-
-
-def multi_gaussian_plasma_lens(
-    rx,
-    ry,
-    freq=1,
-    scale=np.array([]),
-    N_e=np.array([]),
-    posx=np.array([]),
-    posy=np.array([]),
+def MultiGaussianPlasmaLens(
+    rx: npt.ArrayLike,
+    ry: npt.ArrayLike,
+    freq: Quantity = 1*u.Hz,
+    scale: np.ndarray = np.array([]),
+    N_e: np.ndarray = np.array([]),
+    posx: np.ndarray = np.array([]),
+    posy: np.ndarray = np.array([]),
     **funcargs
-):
+) -> npt.ArrayLike:
     """
-    freq = Hz
-    N_e = pc cm^-3
+    _summary_
 
+    _extended_summary_
+
+    Parameters
+    ----------
+    rx : npt.ArrayLike
+        _description_
+    ry : npt.ArrayLike
+        _description_
+    freq : Quantity, optional
+        _description_, by default 1
+    scale : np.ndarray, optional
+        _description_, by default np.array([])
+    N_e : np.ndarray, optional
+        _description_, by default np.array([])
+    posx : np.ndarray, optional
+        _description_, by default np.array([])
+    posy : np.ndarray, optional
+        _description_, by default np.array([])
+
+    Returns
+    -------
+    npt.ArrayLike
+        _description_
     """
     assert posx.shape == posy.shape
     assert posx.shape == N_e.shape
     assert N_e.shape == scale.shape
 
-    r_e = c.alpha**2 * c.a0  # classical electron radius
+    r_e = const.alpha**2 * const.a0  # classical electron radius
     Lens_del = 0
-    plasma_const = r_e * c.c / (2 * np.pi * (freq) ** 2)
+    plasma_const = r_e * const.c / (2 * np.pi * (freq) ** 2)
 
     for ii in range(scale.shape[0]):
         plasma_const_ii = (N_e[ii] * plasma_const).to(u.s).value
@@ -141,64 +186,28 @@ def multi_gaussian_plasma_lens(
     return Lens_del
 
 
-def gravitational_lens(rx, ry, mass=1, **funcargs):
+def GravitationalPMLens(rx, ry, mass=1, **funcargs):
     """
     mass = solar mass
     """
-    Eins_time_const = (4 * c.G * mass * c.M_sun / c.c**3).to(u.s).value
+    Eins_time_const = (4 * const.G * mass * const.M_sun / const.c**3).to(u.s).value
     Lens_del = -Eins_time_const * np.log(np.sqrt((rx) ** 2 + (ry) ** 2))
     return Lens_del
 
 
-def map_grav_p(vec_x, vec_y, eins):
-    # map to lensing plane
-    ang = np.mod(np.arctan2(vec_y, vec_x) + 2 * np.pi, 2 * np.pi)
-    r = np.sqrt(vec_x**2 + vec_y**2)
-    mag = 0.5 * (r + np.sqrt(r**2 + 4 * eins**2))
-
-    return mag * np.cos(ang), mag * np.sin(ang)
-
-
-def map_grav_m(vec_x, vec_y, eins):
-    # map to lensing plane
-    ang = np.mod(np.arctan2(vec_y, vec_x) + 2 * np.pi, 2 * np.pi)
-    r = np.sqrt(vec_x**2 + vec_y**2)
-    mag = 0.5 * (r - np.sqrt(r**2 + 4 * eins**2))
-
-    return mag * np.cos(ang), mag * np.sin(ang)
-
-
-def grav_mag(vec_x, vec_y, eins):
-    # lensing plane
-    r = np.sqrt(vec_x**2 + vec_y**2)
-    mag = np.zeros_like(r)
-    mag[r == 0] = 0
-    mag[r == eins] = np.inf
-    mag[(r != 0) * (r != eins)] = (1 - (eins / r[(r != 0) * (r != eins)]) ** 4) ** (-1)
-    return mag
-
-
-def grav_delay(vec_x, vec_y, imp_x, imp_y, eins, mass):
-    # lensing plane
-    Eins_time_const = 4 * c.G * c.M_sun / c.c**3
-    r1 = np.sqrt((vec_x - imp_x) ** 2 + (vec_y - imp_y) ** 2) / eins
-    r2 = np.sqrt((vec_x) ** 2 + (vec_y) ** 2) / eins
-    return Eins_time_const * mass * (0.5 * r1**2 - np.log(r2))
-
-
 def get_plasma_Ne(
-    rx_size,
-    ry_size,
-    dr,
-    theta_in,
-    theta_out,
-    C2_n=1,
-    freq=1,
-    D_eff=1,
-    seed=None,
-    plot=False,
-):
-    theta_fres = np.sqrt(c.c / (2 * np.pi * freq * D_eff)).to(u.m / u.m)
+    rx_size: int,
+    ry_size: int,
+    dr: float,
+    theta_in: float,
+    theta_out: float,
+    C2_n: float = 1,
+    freq: float = 1,
+    D_eff: float = 1,
+    seed: int = None,
+    plot: bool = False,
+) -> npt.ArrayLike:
+    theta_fres = np.sqrt(const.c / (2 * np.pi * freq * D_eff)).to(u.m / u.m)
     t_inn = theta_in / theta_fres
     t_out = theta_out / theta_fres
 
@@ -207,8 +216,6 @@ def get_plasma_Ne(
     k_1 = fftfreq(rx_size, d=dtheta)
     k_2 = fftfreq(ry_size, d=dtheta)
     k1v, k2v = np.meshgrid(k_1, k_2)
-
-    kv_max = np.amax(np.sqrt(k1v**2 + k2v**2))
 
     if type(seed) is not None:
         np.random.seed(seed)
@@ -238,164 +245,104 @@ def get_plasma_Ne(
     return n_e
 
 
-def GetStatPnt(fermat_pot, i, j):
-    F_cntr = fermat_pot[i, j]
-
-    F_fx = fermat_pot[i + 1, j] - F_cntr
-    F_fy = fermat_pot[i, j + 1] - F_cntr
-
-    F_bx = F_cntr - fermat_pot[i - 1, j]
-    F_by = F_cntr - fermat_pot[i, j - 1]
-
-    # if ((np.sign(F_fx) * np.sign(F_bx)  < 0) * (np.sign(F_fy) * np.sign(F_by) < 0))\
-    #   | ( F_fx + F_bx + F_fy + F_by == 0):
-    if (np.sign(F_fx) * np.sign(F_bx) < 0) * (np.sign(F_fy) * np.sign(F_by) < 0):
-        return True
-    else:
-        return False
-
-
-def GetPntMag(itheta, jtheta, theta_step, fermat_pot):
-    magval = 0.0 + 0j
-
-    fxx = (
-        -fermat_pot[itheta + 2, jtheta]
-        + 16.0 * fermat_pot[itheta + 1, jtheta]
-        - 30.0 * fermat_pot[itheta, jtheta]
-        + 16.0 * fermat_pot[itheta - 1, jtheta]
-        - fermat_pot[itheta - 2, jtheta]
-    ) / (12.0 * theta_step * theta_step)
-
-    fyy = (
-        -fermat_pot[itheta, jtheta + 2]
-        + 16.0 * fermat_pot[itheta, jtheta + 1]
-        - 30.0 * fermat_pot[itheta, jtheta]
-        + 16.0 * fermat_pot[itheta, jtheta - 1]
-        - fermat_pot[itheta, jtheta - 2]
-    ) / (12.0 * theta_step * theta_step)
-    fxy = (
-        -fermat_pot[itheta + 2, jtheta + 2]
-        + fermat_pot[itheta + 2, jtheta - 2]
-        + fermat_pot[itheta - 2, jtheta + 2]
-        - fermat_pot[itheta - 2, jtheta - 2]
-        + 16.0 * fermat_pot[itheta + 1, jtheta + 1]
-        - 16.0 * fermat_pot[itheta + 1, jtheta - 1]
-        - 16.0 * fermat_pot[itheta - 1, jtheta + 1]
-        + 16.0 * fermat_pot[itheta - 1, jtheta - 1]
-    ) / (48.0 * theta_step * theta_step)
-
-    magval += fxx * fyy - fxy * fxy
-    if magval == 0.0 + 0j:
-        return 0.0 + 0j
-    else:
-        magval = 1 / np.sqrt(magval)
-        return magval
-
-
-def PntMagVal(
-    xinds,
-    yinds,
-    theta_step,
-    theta_N,
-    geom_arr,
-    lens_arr,
-    geom_const,
-    lens_const,
-    freqvals,
-    get_eigs=False,
-):
-    def _fermat_pot(xi, yi):
-        return (
-            geom_const * geom_arr[yi + theta_N * xi]
-            + lens_const * freqvals ** (-2) * lens_arr[yi + theta_N * xi]
-        )
-
-    fxx = (
-        -_fermat_pot(xinds + 2, yinds)
-        + 16.0 * _fermat_pot(xinds + 1, yinds)
-        - 30.0 * _fermat_pot(xinds, yinds)
-        + 16.0 * _fermat_pot(xinds - 1, yinds)
-        - _fermat_pot(xinds - 2, yinds)
-    ) / (12.0 * theta_step * theta_step)
-
-    fyy = (
-        -_fermat_pot(xinds, yinds + 2)
-        + 16.0 * _fermat_pot(xinds, yinds + 1)
-        - 30.0 * _fermat_pot(xinds, yinds)
-        + 16.0 * _fermat_pot(xinds, yinds - 1)
-        - _fermat_pot(xinds, yinds - 2)
-    ) / (12.0 * theta_step * theta_step)
-    fxy = (
-        -_fermat_pot(xinds + 2, yinds + 2)
-        + _fermat_pot(xinds + 2, yinds - 2)
-        + _fermat_pot(xinds - 2, yinds + 2)
-        - _fermat_pot(xinds - 2, yinds - 2)
-        + 16.0 * _fermat_pot(xinds + 1, yinds + 1)
-        - 16.0 * _fermat_pot(xinds + 1, yinds - 1)
-        - 16.0 * _fermat_pot(xinds - 1, yinds + 1)
-        + 16.0 * _fermat_pot(xinds - 1, yinds - 1)
-    ) / (48.0 * theta_step * theta_step)
-
-    if get_eigs:
-        return fxx * geom_const, fyy * geom_const, fxy * geom_const
-    else:
-        magval = fxx * fyy - fxy * fxy + 0j
-        magval[magval == 0.0 + 0j] = 0.0 + 0j
-        magval[magval != 0.0 + 0j] = 1 / np.sqrt(magval[magval != 0.0 + 0j])
-
-        return magval * geom_const
-
-
-def AnalyticPntMassGrav(mass, y):
-    """_summary_
-
-    Args:
-        mass (_type_): _description_
-        y (_type_): _description_
-
-    Returns:
-        _type_: _description_
+def AnalyticPointMassGrav(
+    y: float,
+    geo_par: float,
+    lens_par: float,
+) -> T.Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    time_c = 0.5 * y * np.sqrt(y * y + 4) + np.log(
-        (np.sqrt(y * y + 4) + y) / (np.sqrt(y * y + 4) - y)
-    )
+    Get the observables for a point mass gravitational lens.
 
-    time_c = (4 * c.G * c.M_sun / c.c**3).to(u.s).value * time_c * mass
+    Get the observables for a point mass gravitational lens using the
+    analytic solution for a point mass lens.
 
-    mag_c = (y * y + 2 + y * np.sqrt(y * y + 4)) / (y * y + 2 - y * np.sqrt(y * y + 4))
+    Parameters
+    ----------
+    y : float
+        _description_
+    geo_par : float
+        _description_
+    lens_par : float
+        _description_
 
-    return time_c, np.sqrt(1 / mag_c)
+    Returns
+    -------
+    T.Tuple[np.ndarray, np.ndarray, np.ndarray]
+        _description_
+    """
+
+    # stationary point func
+    def _lensgrad(y):
+        im_p = 0.5 * (y + np.sqrt(y * y + 4))
+        im_m = 0.5 * (y - np.sqrt(y * y + 4))
+        return im_p, im_m
+
+    # lens delay func
+    def _lensdel(x, y, mu_g, mu_l):
+        return mu_g * 0.5 * (x - y) ** 2 - mu_l * np.log(np.abs(x))
+
+    # lens mag func
+    def _lensmag(x):
+        return 1 / np.sqrt((1 - 1 / x**4) + 0j)
+
+    xpos1, xpos2 = _lensgrad(y)
+    xposvv = np.array([xpos1, xpos2])
+
+    i_delvv = _lensdel(xposvv, y, geo_par, lens_par)
+    i_magvv = _lensmag(xposvv)
+
+    return xposvv, i_delvv, i_magvv
 
 
-def AnalyticGaussPlasma(y, geo_par, lens_par, freqvals, xm=10, N=20001):
-    """_summary_
+def AnalyticGaussPlasma(
+    y: float,
+    geo_par: float,
+    lens_par: float,
+    freqvals: npt.ArrayLike,
+    xm: float = 10,
+    N: int = 20001,
+) -> T.Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    _summary_
 
-    Args:
-        y (_type_): _description_
-        geo_par (_type_): _description_
-        lens_par (_type_): _description_
-        freqvals (_type_): _description_
-        xm (int, optional): _description_. Defaults to 10.
-        N (int, optional): _description_. Defaults to 20001.
+    _extended_summary_
 
-    Returns:
-        _type_: _description_
+    Parameters
+    ----------
+    y : float
+        _description_
+    geo_par : float
+        _description_
+    lens_par : float
+        _description_
+    freqvals : npt.ArrayLike
+        _description_
+    xm : float, optional
+        _description_, by default 10
+    N : int, optional
+        _description_, by default 20001
+
+    Returns
+    -------
+    T.Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+        _description_
     """
     xvv = np.linspace(-xm, xm, N)  # in lens scale units
 
     # stationary point func
-    lensgrad = lambda x, mu: x * (1 - mu * np.exp(-0.5 * x * x))
+    def _lensgrad(x, mu):
+        return x * (1 - mu * np.exp(-0.5 * x * x))
 
     # lens delay func
-    lensdel = lambda x, y, mu1, mu2: mu1 * 0.5 * (x - y) ** 2 + mu2 * np.exp(
-        -0.5 * x * x
-    )
+    def _lensdel(x, y, mu1, mu2):
+        return mu1 * 0.5 * (x - y) ** 2 + mu2 * np.exp(-0.5 * x * x)
 
     # lens mag func
-    lensmag = lambda x, mu: (
-        (1 + 0 * 1j - mu * np.exp(-0.5 * x * x))
-        * (1 - mu * np.exp(-0.5 * x * x) * (1 - x * x))
-    ) ** (-0.5)
+    def _lensmag(x, mu):
+        return (
+            (1 + 0 * 1j - mu * np.exp(-0.5 * x * x))
+            * (1 - mu * np.exp(-0.5 * x * x) * (1 - x * x))
+        ) ** (-0.5)
 
     freqvv = np.array([])
     xposvv = np.array([])
@@ -407,16 +354,14 @@ def AnalyticGaussPlasma(y, geo_par, lens_par, freqvals, xm=10, N=20001):
 
         mu_ = mu_lens / mu_geom
 
-        idx = np.argwhere(np.diff(np.sign(lensgrad(xvv, mu_) - y))).flatten()
+        idx = np.argwhere(np.diff(np.sign(_lensgrad(xvv, mu_) - y))).flatten()
 
         freqvv = np.append(freqvv, freqvals[ii] * np.ones(idx.size))
 
         xposvv = np.append(xposvv, xvv[idx])
 
-        i_delvv = np.append(i_delvv, lensdel(xvv[idx], y, mu_geom, mu_lens))
+        i_delvv = np.append(i_delvv, _lensdel(xvv[idx], y, mu_geom, mu_lens))
 
-        i_magvv = np.append(i_magvv, lensmag(xvv[idx], mu_))
-
-    return freqvv, xposvv, i_delvv, i_magvv
+        i_magvv = np.append(i_magvv, _lensmag(xvv[idx], mu_))
 
     return freqvv, xposvv, i_delvv, i_magvv
