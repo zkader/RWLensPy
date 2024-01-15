@@ -36,19 +36,20 @@ cpdef vector[complex] RunUnitlessTransferFunc(
     This function will obtain the transfer function for a single 
     lens by finding the images of a given Fermat potential for
     all given frequencies. Note the fermat potential is given as,
-    T(theta) = geom_const * 0.5 * (theta - beta)^2 
-             + lens_const * freq^freq_power * lens_arr(theta) 
+        T(theta) = geom_const * 0.5 * (theta - beta)^2 
+                 + lens_const * freq^freq_power * lens_arr(theta) 
     The image points are found per frequency such that the final
     transfer function will be of the form,
-    H(f) = sum_images epsilon(f) e^(i 2 pi f tau(f))
+        H(f) = sum_images epsilon(f) e^(i 2 pi f tau(f))
 
     Args:
         theta_min (double): The minimum X and Y value. [ul]
         theta_max (double): The maximum X and Y value. [ul]
         theta_N (int): The N number of points along one axis.
-        freq_arr (array[double]): The array of frequency values. Hz
+        freq_arr (array[double]): The array of frequency values. [Hz]
         freq_ref (double): The reference frequency value. [Hz]
-        lens_arr (array[double]): The array of the lens function of shape (N*N,1)
+        lens_arr (array[double]): The array of the lens function
+                                  of shape (N*N)
         beta_x (double): The X position of the source. [ul]
         beta_y (double): The Y position of the source. [ul]
         geom_const (double): The geometric parameter [s]
@@ -57,7 +58,7 @@ cpdef vector[complex] RunUnitlessTransferFunc(
 
     Returns:
         array[complex] : The propagated transfer function.
-    """                                       
+    """
     cdef int freq_N = freq_arr.size()
     cdef vector[complex] tfunc = vector[complex](freq_N)
     cdef vector[physpoint] grad_lens_arr = vector[physpoint](theta_N*theta_N)
@@ -109,33 +110,41 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
                                        double beta_E_y,                                                    
                                        double mass
                                        ):
-    """Get the propagation transfer function for a single lens.
+    """Get the propagation transfer function through two lenses (any + grav).
 
     This function will obtain the transfer function for a single 
     lens by finding the images of a given Fermat potential for
     all given frequencies. Note the fermat potential is given as,
-    T(theta) = geom_const * 0.5 * (theta - beta)^2 
-             + lens_const * freq^freq_power * lens_arr(theta) 
-    The image points are found per frequency such that the final
-    transfer function will be of the form,
-    H(f) = sum_images epsilon(f) e^(i 2 pi f tau(f))
+        T(theta) = geom_const * 0.5 * (theta - beta)^2 
+                 + lens_const * freq^freq_power * lens_arr(theta) 
+    The image points are found per frequency and the 
+    propagated through the analytic point mass gravitational lens.
+    The final transfer function will be of the form,
+        H(f) = sum_images epsilon(f) e^(i 2 pi f tau(f))
 
     Args:
         theta_min (double): The minimum X and Y value. [ul]
         theta_max (double): The maximum X and Y value. [ul]
         theta_N (int): The N number of points along one axis.
-        freq_arr (array[double]): The array of frequency values. Hz
+        freq_arr (array[double]): The array of frequency values. [Hz]
         freq_ref (double): The reference frequency value. [Hz]
-        lens_arr (array[double]): The array of the lens function of shape (N*N,1)
-        beta_x (double): The X position of the source. [ul]
-        beta_y (double): The Y position of the source. [ul]
+        lens_arr (array[double]): The array of the lens function
+                                  of shape (N*N)
+        lens_scale (double): The angular scaling of images on 
+                             plane 1. [rad]
+        beta_x (double): The X position of the source from plane 1. [ul]
+        beta_y (double): The Y position of the source from plane 1. [ul]
         geom_const (double): The geometric parameter [s]
         lens_const (double): The lens parameter [s]
         freq_power (double): The power relation of the lens.
+        eins (double): The Einstein angular radius of the lens. [ul]
+        beta_E_x (double): The X center of plane 1 from plane 2. [ul]
+        beta_E_y (double): The y center of plane 1 from plane 2. [ul]
+        mass (double): The mass of the gravitational lens. [M_sol]
 
     Returns:
         array[complex] : The propagated transfer function.
-    """                      
+    """
     cdef int freq_N = freq_arr.size()
     cdef vector[complex] tfunc = vector[complex](freq_N)
     cdef vector[physpoint] grad_lens_arr = vector[physpoint](theta_N*theta_N)
@@ -194,29 +203,43 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
                                        double lens_const_2,
                                        double freq_power_2    
                                        ):
-    """Get the propagation transfer function for a single lens.
+    """Get the propagation transfer function through two lenses (any + any).
 
     This function will obtain the transfer function for a single 
     lens by finding the images of a given Fermat potential for
     all given frequencies. Note the fermat potential is given as,
-    T(theta) = geom_const * 0.5 * (theta - beta)^2 
-             + lens_const * freq^freq_power * lens_arr(theta) 
-    The image points are found per frequency such that the final
-    transfer function will be of the form,
-    H(f) = sum_images epsilon(f) e^(i 2 pi f tau(f))
+        T(theta) = geom_const * 0.5 * (theta - beta)^2 
+                 + lens_const * freq^freq_power * lens_arr(theta) 
+    The image points are found per frequency and the 
+    propagated through another fermat potential. The positions of
+    images on plane 1 are the source positions for plane 2.
+    The final transfer function will be of the form,
+        H(f) = sum_images epsilon(f) e^(i 2 pi f tau(f))
 
     Args:
         theta_min (double): The minimum X and Y value. [ul]
         theta_max (double): The maximum X and Y value. [ul]
         theta_N (int): The N number of points along one axis.
-        freq_arr (array[double]): The array of frequency values. Hz
+        freq_arr (array[double]): The array of frequency values. [Hz]
         freq_ref (double): The reference frequency value. [Hz]
-        lens_arr (array[double]): The array of the lens function of shape (N*N,1)
-        beta_x (double): The X position of the source. [ul]
-        beta_y (double): The Y position of the source. [ul]
-        geom_const (double): The geometric parameter [s]
-        lens_const (double): The lens parameter [s]
-        freq_power (double): The power relation of the lens.
+        lens_arr_1 (array[double]): The array of the lens function
+                                    on plane 1 of shape (N*N)
+        lens_scale_1 (double): The angular scaling of images on 
+                             plane 1. [rad]
+        beta_1_x (double): The X position of the source from plane 1. [ul]
+        beta_1_y (double): The Y position of the source from plane 1. [ul]
+        geom_const_1 (double): The geometric parameter on plane 1. [s]
+        lens_const_1 (double): The lens parameter on plane 1. [s]
+        freq_power_1 (double): The power relation of the lens on plane 1.
+        lens_arr_2 (array[double]): The array of the lens function
+                                    on plane 2 of shape (N*N)
+        lens_scale_2 (double): The angular scaling of images on 
+                                plane 2. [rad]
+        beta_2_x (double): The X position of the source from plane 1. [ul]
+        beta_2_y (double): The Y position of the source from plane 2. [ul]
+        geom_const_2 (double): The geometric parameter on plane 2. [s]
+        lens_const_2 (double): The lens parameter on plane 2. [s]
+        freq_power_2 (double): The power relation of the lens on plane 2.
 
     Returns:
         array[complex] : The propagated transfer function.
@@ -269,29 +292,23 @@ cpdef vector[complex] RunGravTransferFunc(
                                        double beta_y,    
                                        double mass
                                        ):
-    """Get the propagation transfer function for a single lens.
+    """Get the propagation transfer function through a gravitational lens.
 
     This function will obtain the transfer function for a single 
     lens by finding the images of a given Fermat potential for
     all given frequencies. Note the fermat potential is given as,
-    T(theta) = geom_const * 0.5 * (theta - beta)^2 
-             + lens_const * freq^freq_power * lens_arr(theta) 
-    The image points are found per frequency such that the final
-    transfer function will be of the form,
-    H(f) = sum_images epsilon(f) e^(i 2 pi f tau(f))
+        T(theta) = geom_const * 0.5 * (theta - beta)^2 
+                 + lens_const * freq^freq_power * lens_arr(theta) 
+    The image points are found per frequency for the analytic
+    point mass gravitational lens. The final transfer function will
+    be of the form,
+        H(f) = sum_images epsilon(f) e^(i 2 pi f tau(f))
 
     Args:
-        theta_min (double): The minimum X and Y value. [ul]
-        theta_max (double): The maximum X and Y value. [ul]
-        theta_N (int): The N number of points along one axis.
-        freq_arr (array[double]): The array of frequency values. Hz
-        freq_ref (double): The reference frequency value. [Hz]
-        lens_arr (array[double]): The array of the lens function of shape (N*N,1)
-        beta_x (double): The X position of the source. [ul]
-        beta_y (double): The Y position of the source. [ul]
-        geom_const (double): The geometric parameter [s]
-        lens_const (double): The lens parameter [s]
-        freq_power (double): The power relation of the lens.
+        freq_arr (array[double]): The array of frequency values. [Hz]
+        beta_x (double): The X position of the source from plane 1. [ul]
+        beta_y (double): The Y position of the source from plane 1. [ul]
+        mass (double): The mass of the gravitational lens. [M_sol]
 
     Returns:
         array[complex] : The propagated transfer function.
@@ -326,35 +343,32 @@ cpdef vector[complex] RunGravTransferFunc(
 ===================================================================
 
 """
-cpdef GetUnitlessFreqStationaryPoints(vector[double] lens_arr,
-                                       double theta_min,
+cpdef GetUnitlessFreqStationaryPoints( double theta_min,
                                        double theta_max,
                                        int theta_N,
+                                       vector[double] lens_arr,                                       
+                                       vector[double] freq_arr,
                                        double beta_x,
                                        double beta_y,
-                                       vector[double] freq_arr,
                                        double geom_const,
                                        double lens_const,
                                        double freq_power
                                        ):
-    """Get the propagation transfer function for a single lens.
+    """Get all observables after propagation through a lens.
 
     This function will obtain the transfer function for a single 
     lens by finding the images of a given Fermat potential for
     all given frequencies. Note the fermat potential is given as,
     T(theta) = geom_const * 0.5 * (theta - beta)^2 
              + lens_const * freq^freq_power * lens_arr(theta) 
-    The image points are found per frequency such that the final
-    transfer function will be of the form,
-    H(f) = sum_images epsilon(f) e^(i 2 pi f tau(f))
+    The image points for every frequency are returned. 
 
     Args:
         theta_min (double): The minimum X and Y value. [ul]
         theta_max (double): The maximum X and Y value. [ul]
         theta_N (int): The N number of points along one axis.
-        freq_arr (array[double]): The array of frequency values. Hz
-        freq_ref (double): The reference frequency value. [Hz]
-        lens_arr (array[double]): The array of the lens function of shape (N*N,1)
+        lens_arr (array[double]): The array of the lens function of shape (N*N)
+        freq_arr (array[double]): The array of frequency values. [Hz]
         beta_x (double): The X position of the source. [ul]
         beta_y (double): The Y position of the source. [ul]
         geom_const (double): The geometric parameter [s]
@@ -362,7 +376,11 @@ cpdef GetUnitlessFreqStationaryPoints(vector[double] lens_arr,
         freq_power (double): The power relation of the lens.
 
     Returns:
-        array[complex] : The propagated transfer function.
+        thetaxs_ (array[double]): The X position of the images. [ul]
+        thetays_ (array[double]): The Y position of the images. [ul]
+        freqs_ (array[double]): The frequency of the images. [Hz]
+        delayarr (array[double]): The delay of the images. [s]
+        magarr (array[complex]): The magnification of the images. [ul]
     """
     cdef int freq_N = freq_arr.size()
     cdef vector[vector[imagepoint]] freqpnts = vector[vector[imagepoint]](freq_N)
@@ -425,32 +443,49 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
                                        double lens_const_2,
                                        double freq_power_2 
                                      ):
-    """Get the propagation transfer function for a single lens.
+    """Get all observables after two lens propagation (any + any).
 
     This function will obtain the transfer function for a single 
     lens by finding the images of a given Fermat potential for
     all given frequencies. Note the fermat potential is given as,
     T(theta) = geom_const * 0.5 * (theta - beta)^2 
              + lens_const * freq^freq_power * lens_arr(theta) 
-    The image points are found per frequency such that the final
-    transfer function will be of the form,
-    H(f) = sum_images epsilon(f) e^(i 2 pi f tau(f))
+    The image points are found per frequency and the 
+    propagated through another fermat potential. The positions of
+    images on plane 1 are the source positions for plane 2. The
+    image points for every frequency are returned. 
 
     Args:
         theta_min (double): The minimum X and Y value. [ul]
         theta_max (double): The maximum X and Y value. [ul]
         theta_N (int): The N number of points along one axis.
-        freq_arr (array[double]): The array of frequency values. Hz
+        freq_arr (array[double]): The array of frequency values. [Hz]
         freq_ref (double): The reference frequency value. [Hz]
-        lens_arr (array[double]): The array of the lens function of shape (N*N,1)
-        beta_x (double): The X position of the source. [ul]
-        beta_y (double): The Y position of the source. [ul]
-        geom_const (double): The geometric parameter [s]
-        lens_const (double): The lens parameter [s]
-        freq_power (double): The power relation of the lens.
+        lens_arr_1 (array[double]): The array of the lens function
+                                    on plane 1 of shape (N*N)
+        lens_scale_1 (double): The angular scaling of images on 
+                             plane 1. [rad]
+        beta_1_x (double): The X position of the source from plane 1. [ul]
+        beta_1_y (double): The Y position of the source from plane 1. [ul]
+        geom_const_1 (double): The geometric parameter on plane 1. [s]
+        lens_const_1 (double): The lens parameter on plane 1. [s]
+        freq_power_1 (double): The power relation of the lens on plane 1.
+        lens_arr_2 (array[double]): The array of the lens function
+                                    on plane 2 of shape (N*N)
+        lens_scale_2 (double): The angular scaling of images on 
+                                plane 2. [rad]
+        beta_2_x (double): The X position of the source from plane 1. [ul]
+        beta_2_y (double): The Y position of the source from plane 2. [ul]
+        geom_const_2 (double): The geometric parameter on plane 2. [s]
+        lens_const_2 (double): The lens parameter on plane 2. [s]
+        freq_power_2 (double): The power relation of the lens on plane 2.
 
     Returns:
-        array[complex] : The propagated transfer function.
+        thetaxs_ (array[double]): The X position of the images. [ul]
+        thetays_ (array[double]): The Y position of the images. [ul]
+        freqs_ (array[double]): The frequency of the images. [Hz]
+        delayarr (array[double]): The delay of the images. [s]
+        magarr (array[complex]): The magnification of the images. [ul]
     """                                     
     cdef int freq_N = freq_arr.size()
     cdef vector[complex] tfunc = vector[complex](freq_N)
@@ -521,7 +556,7 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
                                        double beta_2_x,
                                        double beta_2_y
                                      ):
-    """Get all the images and observables for a single lens.
+    """Get all observables after two lens propagation (any + grav).
 
     This function will obtain the transfer function for a single 
     lens by finding the images of a given Fermat potential for
@@ -534,17 +569,29 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
         theta_min (double): The minimum X and Y value. [ul]
         theta_max (double): The maximum X and Y value. [ul]
         theta_N (int): The N number of points along one axis.
-        freq_arr (array[double]): The array of frequency values. Hz
+        freq_arr (array[double]): The array of frequency values. [Hz]
         freq_ref (double): The reference frequency value. [Hz]
-        lens_arr (array[double]): The array of the lens function of shape (N*N,1)
-        beta_x (double): The X position of the source. [ul]
-        beta_y (double): The Y position of the source. [ul]
-        geom_const (double): The geometric parameter [s]
-        lens_const (double): The lens parameter [s]
-        freq_power (double): The power relation of the lens.
+        lens_arr_1 (array[double]): The array of the lens function
+                                    on plane 1 of shape (N*N)
+        lens_scale_1 (double): The angular scaling of images on 
+                             plane 1. [rad]
+        beta_1_x (double): The X position of the source from plane 1. [ul]
+        beta_1_y (double): The Y position of the source from plane 1. [ul]
+        geom_const_1 (double): The geometric parameter on plane 1. [s]
+        lens_const_1 (double): The lens parameter on plane 1. [s]
+        freq_power_1 (double): The power relation of the lens on plane 1.
+        mass (double): The mass of the gravitational lens on plane 2. [M_sol]
+        lens_scale_2 (double): The angular scaling of images on 
+                                plane 2. [rad]
+        beta_2_x (double): The X position of the source from plane 1. [ul]
+        beta_2_y (double): The Y position of the source from plane 2. [ul]
 
     Returns:
-        array[complex] : The propagated transfer function.
+        thetaxs_ (array[double]): The X position of the images. [ul]
+        thetays_ (array[double]): The Y position of the images. [ul]
+        freqs_ (array[double]): The frequency of the images. [Hz]
+        delayarr (array[double]): The delay of the images. [s]
+        magarr (array[complex]): The magnification of the images. [ul]
     """
     cdef int freq_N = freq_arr.size()
     cdef vector[physpoint] grad_lens_arr_1 = vector[physpoint](theta_N*theta_N)
@@ -707,7 +754,7 @@ cpdef np.ndarray[np.double_t, ndim=2] GetPoints(double theta_min,
         theta_N (int): The number of point along one axis.
 
     Return:
-        np.ndarray: An array containing grid values of size (N*N)
+        arr (np.ndarray): An array containing grid values of size (N*N,2)
     """    
     cdef int sizeNN = theta_N*theta_N
     cdef np.ndarray[np.double_t, ndim=2] arr = np.zeros([sizeNN,2], dtype=np.double)
