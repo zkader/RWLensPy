@@ -18,7 +18,7 @@ def FermatPotential(
     lens_freq_scaling: float,
     lens_func: T.Callable,
     **funcargs
-) -> np.ArrayLike:
+) -> npt.ArrayLike:
     """
     Get the Fermat potential with a given lensing function.
 
