@@ -4,9 +4,6 @@ import typing as T
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
-from astropy import constants as const
-from astropy import units as u
-from astropy.units import Quantity
 from scipy.fft import fftfreq, fftn, ifftn
 
 
@@ -15,11 +12,15 @@ def FermatPotential(
     ry: npt.ArrayLike,
     sx: float,
     sy: float,
-    D_eff: float,
+    freq: float,
+    geom_par: float,
+    lens_par: float,
+    lens_freq_scaling: float,
     lens_func: T.Callable,
     **funcargs
-) -> npt.ArrayLike:
-    """Get the Fermat potential.
+) -> np.ArrayLike:
+    """
+    Get the Fermat potential with a given lensing function.
 
     Get the Fermat potential for a single lens plane. A given lensing
     function will generate the lensing array for the Fermat potential.
@@ -27,121 +28,123 @@ def FermatPotential(
     positions on the plane will map to the geometric delay and lensing
     delay at that point.
 
-    Args:
-        rx (array[float]): Array of X positions on the lens plane.
-        ry (array[float]): Array of Y positions on the lens plane.
-        sx (float): X position of the source point.
-        sy (float): Y position of the source point.
-        D_eff (float): The effective distance of the lensing system.
-        lens_func (func): The function must be of the form
-                          func(rx,ry,**funcargs).
-        **funcargs: Arguments for the lensing function.
 
-    Returns:
-        array[float]: The Fermat potential
+    Parameters
+    ----------
+    rx : ArrayLike
+        ArrayLike of X positions on the lens plane.
+    ry : ArrayLike
+        ArrayLike of Y positions on the lens plane.
+    sx : float
+        X position of the source point.
+    sy : float
+        Y position of the source point.
+    freq : float
+        Frequency of light being propagated.
+    geom_par : float
+        The geometric parameter of the Fermat potential.
+    lens_par : float
+        The lensing parameter of the Fermat potential.
+    lens_freq_scaling : float
+        The frequency power scaling of the lens.
+    lens_func : Callable
+        The function must be of the form func(rx,ry,**funcargs).
+    **funcargs : dict, optional
+        Extra arguments to `lens_func`.
+
+    Returns
+    -------
+    ArrayLike
+        The Fermat potential time delay
     """
-    Geom_del = (D_eff / const.c).to(u.s).value * 0.5 * ((rx - sx) ** 2 + (ry - sy) ** 2)
-
-    Lens_del = lens_func(rx, ry, **funcargs)
+    Geom_del = geom_par * 0.5 * ((rx - sx) ** 2 + (ry - sy) ** 2)
+    Lens_del = lens_par * freq**lens_freq_scaling * lens_func(rx, ry, **funcargs)
 
     return Geom_del + Lens_del
 
 
-def DMLens(
-    rx: npt.ArrayLike,
-    ry: npt.ArrayLike,
-    freq: Quantity = 1 * u.Hz,
-    DM: Quantity = 1 * u.pc * u.cm**-3,
-    **funcargs
-):
-    """Get the lensing delay from a lens of constant DM.
-
-    Args:
-        rx (array[float]): Array of X positions on the lens plane.
-        ry (array[float]): Array of Y positions on the lens plane.
-        freq (float, optional): Frequency of the observation.
-                                [Hz] Defaults to 1.
-        DM (float, optional): The DM of the lens. [pc cm^-3] Defaults to 1.
-
-    Returns:
-        float: The lensing delay.
+def ConstantLens(
+    rx: npt.ArrayLike, ry: npt.ArrayLike, constant: float = 1
+) -> npt.ArrayLike:
     """
-    r_e = const.alpha**2 * const.a0  # classical electron radius
-    plasma_const = r_e * const.c / (2 * np.pi * (freq.to(1 / u.s)) ** 2)
-    plasma_const = plasma_const.to(u.pc**-1 * u.cm**3 * u.s)
+    Get the lensing function of a constant lens.
 
-    return plasma_const.value * DM
+    Parameters
+    ----------
+    rx : ArrayLike
+        ArrayLike of X positions on the lens plane.
+    ry : ArrayLike
+        ArrayLike of Y positions on the lens plane.
+    constant : float, optional
+        The constant value of the lens, by default 1
 
-
-def PlasmaPhaseLens(
-    rx: npt.ArrayLike,
-    ry: npt.ArrayLike,
-    freq: Quantity = 1 * u.Hz,
-    ne_mat: T.Optional[npt.ArrayLike] = None,
-    **funcargs
-):
-    """Get the lensing delay from a given electron column density array.
-
-    Args:
-        rx (array[float]): Array of X positions on the lens plane.
-        ry (array[float]): Array of Y positions on the lens plane.
-        freq (float, optional): Frequency of the observation.
-                                [Hz] Defaults to 1.
-        ne_mat (array[float], optional): _description_. Defaults to None.
-        **funcargs: Arguments for the lensing function.
-
-    Returns:
-        array[float]: The lensing delay.
+    Returns
+    -------
+    ArrayLike
+        The value of the lensing function.
     """
-    r_e = const.alpha**2 * const.a0  # classical electron radius
-    plasma_const = r_e * const.c / (2 * np.pi * (freq.to(1 / u.s)) ** 2)
-    plasma_const = plasma_const.to(u.pc**-1 * u.cm**3 * u.s)
-
-    ne_mat = plasma_const.value * ne_mat
-
-    return ne_mat
+    return 0 * rx + 0 * ry + constant
 
 
-def GaussianPlasmaLens(
-    rx: npt.ArrayLike,
-    ry: npt.ArrayLike,
-    freq: Quantity = 1 * u.Hz,
-    scale: float = 1,
-    DM_: float = 1,
-    **funcargs
-):
-    """_summary_
-
-    Args:
-        rx (array[float]): Array of X positions on the lens plane.
-        ry (array[float]): Array of Y positions on the lens plane.
-        freq (float, optional): Frequency of the observation.
-                                [Hz] Defaults to 1.
-        ne_mat (array[float], optional): _description_. Defaults to None.
-        **funcargs: Arguments for the lensing function.
-        scale (int, optional): _description_. Defaults to 1.
-        n_e (int, optional): _description_. [pc cm^-3] Defaults to 1.
-
-    Returns:
-        _type_: _description_
+def NumericGridLens(
+    rx: npt.ArrayLike, ry: npt.ArrayLike, lens_del: T.Optional[npt.ArrayLike] = None
+) -> npt.ArrayLike:
     """
-    r_e = const.alpha**2 * const.a0  # classical electron radius
-    plasma_const = DM_ * r_e * const.c / (2 * np.pi * (freq) ** 2)
-    plasma_const = plasma_const.to(u.s).value
+    Get a numerical lens array in a compatible format for FermatPotential().
 
-    Lens_del = plasma_const * np.exp(-0.5 * ((rx) ** 2 + (ry) ** 2) / (scale**2))
+    Parameters
+    ----------
+    rx : ArrayLike
+        ArrayLike of X positions on the lens plane.
+    ry : ArrayLike
+        ArrayLike of Y positions on the lens plane.
+    lens_del : ArrayLike or None, optional
+        A ArrayLike of lensing delay functions, by default None
+
+    Returns
+    -------
+    ArrayLike
+        The value of the lensing function.
+    """
+    if lens_del is None:
+        return 0 * rx + 0 * ry
+    else:
+        return 0 * rx + 0 * ry + lens_del
+
+
+def GaussianLens(
+    rx: npt.ArrayLike, ry: npt.ArrayLike, scale: float = 1, amp: float = 1
+) -> npt.ArrayLike:
+    """
+    Get a Gaussian lens.
+
+    Parameters
+    ----------
+    rx : ArrayLike
+        ArrayLike of X positions on the lens plane.
+    ry : ArrayLike
+        ArrayLike of Y positions on the lens plane.
+    scale : float, optional
+        The width of the Gaussian, by default 1
+    amp : float, optional
+        The amplitude of the Gaussian, by default 1
+
+    Returns
+    -------
+    ArrayLike
+        The value of the lensing function.
+    """
+    Lens_del = amp * np.exp(-0.5 * ((rx) ** 2 + (ry) ** 2) / (scale**2))
     return Lens_del
 
 
-def MultiGaussianPlasmaLens(
+def MultiGaussianLens(
     rx: npt.ArrayLike,
     ry: npt.ArrayLike,
-    freq: Quantity = 1*u.Hz,
-    scale: np.ndarray = np.array([]),
-    N_e: np.ndarray = np.array([]),
-    posx: np.ndarray = np.array([]),
-    posy: np.ndarray = np.array([]),
-    **funcargs
+    scales: np.ndarray = np.array([1]),
+    amps: np.ndarray = np.array([1]),
+    posx: np.ndarray = np.array([0]),
+    posy: np.ndarray = np.array([0]),
 ) -> npt.ArrayLike:
     """
     _summary_
@@ -150,125 +153,184 @@ def MultiGaussianPlasmaLens(
 
     Parameters
     ----------
-    rx : npt.ArrayLike
-        _description_
-    ry : npt.ArrayLike
-        _description_
-    freq : Quantity, optional
-        _description_, by default 1
-    scale : np.ndarray, optional
-        _description_, by default np.array([])
-    N_e : np.ndarray, optional
-        _description_, by default np.array([])
-    posx : np.ndarray, optional
-        _description_, by default np.array([])
-    posy : np.ndarray, optional
-        _description_, by default np.array([])
+    rx : ArrayLike
+        ArrayLike of X positions on the lens plane.
+    ry : ArrayLike
+        ArrayLike of Y positions on the lens plane.
+    scales : ndarray, optional
+        Array of widths for the Gaussians, by default np.array([1])
+    amps : ndarray, optional
+        Array of amplitudes for the Gaussians, by default np.array([1])
+    posx : ndarray, optional
+        Array of X positions for the Gaussians, by default np.array([0])
+    posy : ndarray, optional
+        Array of Y positions for the Gaussians, by default np.array([0])
 
     Returns
     -------
-    npt.ArrayLike
-        _description_
+    ArrayLike
+        The value of the lensing function.
     """
     assert posx.shape == posy.shape
-    assert posx.shape == N_e.shape
-    assert N_e.shape == scale.shape
+    assert posx.shape == amps.shape
+    assert amps.shape == scales.shape
 
-    r_e = const.alpha**2 * const.a0  # classical electron radius
     Lens_del = 0
-    plasma_const = r_e * const.c / (2 * np.pi * (freq) ** 2)
-
-    for ii in range(scale.shape[0]):
-        plasma_const_ii = (N_e[ii] * plasma_const).to(u.s).value
-        Lens_del = Lens_del + plasma_const_ii * np.exp(
-            -0.5 * ((rx - posx[ii]) ** 2 + (ry - posy[ii]) ** 2) / (scale[ii] ** 2)
+    for ii in range(scales.shape[0]):
+        Lens_del = Lens_del + amps[ii] * np.exp(
+            -0.5 * ((rx - posx[ii]) ** 2 + (ry - posy[ii]) ** 2) / (scales[ii] ** 2)
         )
     return Lens_del
 
 
-def GravitationalPMLens(rx, ry, mass=1, **funcargs):
+def LogLens(rx: npt.ArrayLike, ry: npt.ArrayLike) -> npt.ArrayLike:
     """
-    mass = solar mass
+    Get a radially symmetric natural log lens.
+
+    Parameters
+    ----------
+    rx : ArrayLike
+        ArrayLike of X positions on the lens plane.
+    ry : ArrayLike
+        ArrayLike of Y positions on the lens plane.
+
+    Returns
+    -------
+    ArrayLike
+        The value of the lensing function.
     """
-    Eins_time_const = (4 * const.G * mass * const.M_sun / const.c**3).to(u.s).value
-    Lens_del = -Eins_time_const * np.log(np.sqrt((rx) ** 2 + (ry) ** 2))
-    return Lens_del
+    return np.log(np.sqrt((rx) ** 2 + (ry) ** 2))
 
 
-def get_plasma_Ne(
+def RandomPowerLawLens(
     rx_size: int,
     ry_size: int,
     dr: float,
-    theta_in: float,
-    theta_out: float,
-    C2_n: float = 1,
-    freq: float = 1,
-    D_eff: float = 1,
+    powerscaling: float = -11 / 3,
+    amp: float = 1,
     seed: int = None,
     plot: bool = False,
 ) -> npt.ArrayLike:
-    theta_fres = np.sqrt(const.c / (2 * np.pi * freq * D_eff)).to(u.m / u.m)
-    t_inn = theta_in / theta_fres
-    t_out = theta_out / theta_fres
+    """
+    Get a random realization for a power law lens.
 
-    dtheta = dr / theta_fres
+    The lens array generated here is based on a power spectrum scaling.
+    The power scaling relation is given by,
+        P(k) = amp * k ^ powerscaling
+    The random state can be seeded.
 
-    k_1 = fftfreq(rx_size, d=dtheta)
-    k_2 = fftfreq(ry_size, d=dtheta)
+    Parameters
+    ----------
+    rx_size : int
+        Number of grid points in the X directions.
+    ry_size : int
+        Number of grid points in the X directions.
+    dr : float
+        The spatial width of one grid cell.
+    powerscaling : float, optional
+        The power scaling of the power spectrum, by default -11/3
+    amp : float, optional
+        The amplitude of the power spectrum, by default 1
+    seed : int, optional
+        The seed of the random state, by default None
+    plot : bool, optional
+        Plot a diagnostic plot, by default False
+
+    Returns
+    -------
+    ArrayLike
+        The value of the lensing function.
+    """
+    k_1 = fftfreq(rx_size, d=dr)
+    k_2 = fftfreq(ry_size, d=dr)
     k1v, k2v = np.meshgrid(k_1, k_2)
 
     if type(seed) is not None:
-        np.random.seed(seed)
+        rdmstate = np.random.RandomState(seed)
+        lens_del = rdmstate.normal(loc=0, scale=1, size=(rx_size, ry_size))
+    else:
+        lens_del = np.random.normal(loc=0, scale=1, size=(rx_size, ry_size))
 
-    n_e = np.random.normal(loc=0, scale=1, size=(rx_size, ry_size))
-    n_e = fftn(n_e, axes=(-2, -1))
+    lens_del = fftn(lens_del, axes=(-2, -1))
 
-    lmin = t_inn.value
-    lmax = t_out.value
-    P_ne = (
-        C2_n
-        * (k1v**2 + k2v**2 + (1 / lmax) ** 2) ** (-11 / (2 * 3))
-        * np.exp(-0.5 * (k1v**2 + k2v**2) / (1 / lmin) ** 2)
-        / np.sqrt(2 * np.pi * (1 / lmin) ** 2)
-    )
+    Powerspec = amp * (k1v**2 + k2v**2) ** (powerscaling / 2)
 
-    n_e = n_e * np.sqrt(P_ne)
-    n_e = ifftn(n_e, axes=(-2, -1)).real
-    n_e = n_e - np.mean(n_e)
+    lens_del = lens_del * np.sqrt(Powerspec)
+    lens_del = ifftn(lens_del, axes=(-2, -1)).real
+    lens_del = lens_del - np.mean(lens_del)
 
     if plot:
         plt.figure()
-        plt.plot(np.sqrt(k1v**2 + k2v**2).ravel(), P_ne.ravel())
+        plt.plot(np.sqrt(k1v**2 + k2v**2).ravel(), Powerspec.ravel())
         plt.yscale("log")
         plt.xscale("log")
         plt.show()
-    return n_e
+    return lens_del
+
+
+def RandomGaussianLens(
+    rx_size: int, ry_size: int, sigma: float = 1, seed: int = None
+) -> npt.ArrayLike:
+    """
+    Get a random zero-mean Gaussian realization for a lens.
+
+    The lens array generated here is based on Gaussian statistics.
+    The random state can be seeded.
+
+    Parameters
+    ----------
+    rx_size : int
+        Number of grid points in the X directions.
+    ry_size : int
+        Number of grid points in the Y directions.
+    sigma : float, optional
+        The standard deviation of the Gaussian probabilty distribution, by default 1
+    seed : int, optional
+        The seed of the random state, by default None
+
+    Returns
+    -------
+    ArrayLike
+        The value of the lensing function.
+    """
+    if type(seed) is not None:
+        rdmstate = np.random.RandomState(seed)
+        lens_del = rdmstate.normal(loc=0, scale=sigma, size=(rx_size, ry_size))
+    else:
+        lens_del = np.random.normal(loc=0, scale=sigma, size=(rx_size, ry_size))
+
+    return lens_del
 
 
 def AnalyticPointMassGrav(
     y: float,
-    geo_par: float,
+    geom_par: float,
     lens_par: float,
 ) -> T.Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Get the observables for a point mass gravitational lens.
 
     Get the observables for a point mass gravitational lens using the
-    analytic solution for a point mass lens.
+    analytic solution for a point mass lens. Note this is solved along
+    the axis of the source and the origin of the lens plane.
 
     Parameters
     ----------
     y : float
-        _description_
-    geo_par : float
-        _description_
+        Source position on the lens plane.
+    geom_par : float
+        The geometric parameter of the Fermat potential.
     lens_par : float
-        _description_
+        The lensing parameter of the Fermat potential.
 
     Returns
     -------
-    T.Tuple[np.ndarray, np.ndarray, np.ndarray]
-        _description_
+    xposvv : ndarray
+        Array of the image positions on the lens plane.
+    i_delvv : ndarray
+        Array of the image delays.
+    i_magvv : ndarray
+        Array of the image magnifications.
     """
 
     # stationary point func
@@ -288,7 +350,7 @@ def AnalyticPointMassGrav(
     xpos1, xpos2 = _lensgrad(y)
     xposvv = np.array([xpos1, xpos2])
 
-    i_delvv = _lensdel(xposvv, y, geo_par, lens_par)
+    i_delvv = _lensdel(xposvv, y, geom_par, lens_par)
     i_magvv = _lensmag(xposvv)
 
     return xposvv, i_delvv, i_magvv
@@ -296,36 +358,47 @@ def AnalyticPointMassGrav(
 
 def AnalyticGaussPlasma(
     y: float,
-    geo_par: float,
+    geom_par: float,
     lens_par: float,
     freqvals: npt.ArrayLike,
     xm: float = 10,
     N: int = 20001,
 ) -> T.Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
-    _summary_
+    Get the observables for a Gaussian plasma lens.
 
-    _extended_summary_
+    Get the observables for a Gaussian plasma lens using the
+    analytic solutions. The image solutions do not always have an
+    analytic solution so the solutions are found by numerical root
+    finding.Note this is solved along the axis of the source and
+    the origin of the lens plane, assuming the lens is radially
+    symmetric.
 
     Parameters
     ----------
     y : float
-        _description_
-    geo_par : float
-        _description_
+        Source position on the lens plane.
+    geom_par : float
+        The geometric parameter of the Fermat potential.
     lens_par : float
-        _description_
-    freqvals : npt.ArrayLike
-        _description_
+        The lensing parameter of the Fermat potential.
+    freqvals : ArrayLike
+        Array of frequency values to search for images.
     xm : float, optional
-        _description_, by default 10
+        The maximum spatial grid position on the lens plane, by default 10
     N : int, optional
-        _description_, by default 20001
+        The total number of points on the grid, by default 20001
 
     Returns
     -------
-    T.Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
-        _description_
+    freqvv : ndarray
+        Array of the frequencies for the image.
+    xposvv : ndarray
+        Array of the image positions on the lens plane.
+    i_delvv : ndarray
+        Array of the image delays.
+    i_magvv : ndarray
+        Array of the image magnifications.
     """
     xvv = np.linspace(-xm, xm, N)  # in lens scale units
 
@@ -349,10 +422,9 @@ def AnalyticGaussPlasma(
     i_delvv = np.array([])
     i_magvv = np.array([])
     for ii, tfi in enumerate(freqvals):
-        mu_geom = geo_par
         mu_lens = lens_par / tfi**2
 
-        mu_ = mu_lens / mu_geom
+        mu_ = mu_lens / geom_par
 
         idx = np.argwhere(np.diff(np.sign(_lensgrad(xvv, mu_) - y))).flatten()
 
@@ -360,7 +432,7 @@ def AnalyticGaussPlasma(
 
         xposvv = np.append(xposvv, xvv[idx])
 
-        i_delvv = np.append(i_delvv, _lensdel(xvv[idx], y, mu_geom, mu_lens))
+        i_delvv = np.append(i_delvv, _lensdel(xvv[idx], y, geom_par, mu_lens))
 
         i_magvv = np.append(i_magvv, _lensmag(xvv[idx], mu_))
 
