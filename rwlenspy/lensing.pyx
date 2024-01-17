@@ -76,7 +76,12 @@ cpdef vector[complex] RunUnitlessTransferFunc(
 
     SetGradientArrs( theta_N, theta_step, lens_arr, grad_lens_arr, hess_lens_arr)
     
-    cdef int freq_mod = freq_N//10
+    cdef int freq_mod
+    if freq_N//10 == 0:
+        freq_mod = freq_N
+    else:
+        freq_mod = freq_N//10
+
 
     reset() # reset counter and init lock        
     with nogil, parallel():
@@ -167,7 +172,11 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
     
     cdef double lens_scaling = lens_scale / eins
     
-    cdef int freq_mod = freq_N//10
+    cdef int freq_mod
+    if freq_N//10 == 0:
+        freq_mod = freq_N
+    else:
+        freq_mod = freq_N//10
     
     reset() # reset counter and init lock            
     with nogil, parallel():
@@ -269,7 +278,12 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
     
     cdef double lens_scaling = lens_scale_1 / lens_scale_2
     
-    cdef int freq_mod = freq_N//10
+    cdef int freq_mod
+    if freq_N//10 == 0:
+        freq_mod = freq_N
+    else:
+        freq_mod = freq_N//10
+
     
     reset() # reset counter and init lock            
     with nogil, parallel():
@@ -323,7 +337,12 @@ cpdef vector[complex] RunGravTransferFunc(
     cdef int freq_ii
     cdef double freq_val
     
-    cdef int freq_mod = freq_N//10
+    cdef int freq_mod
+    if freq_N//10 == 0:
+        freq_mod = freq_N
+    else:
+        freq_mod = freq_N//10
+
     
     reset() # reset counter and init lock            
     with nogil, parallel():
@@ -399,7 +418,12 @@ cpdef GetUnitlessFreqStationaryPoints( double theta_min,
 
     SetGradientArrs( theta_N, theta_step, lens_arr, grad_lens_arr, hess_lens_arr)
     
-    cdef int freq_mod = freq_N//10
+    cdef int freq_mod 
+    if freq_N//10 == 0:
+        freq_mod = freq_N
+    else:
+        freq_mod = freq_N//10
+
     cdef size_t vsize 
     
     reset() # reset counter,time,memory and init lock            
@@ -513,7 +537,12 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
     
     SetGradientArrs( theta_N, theta_step, lens_arr_2, grad_lens_arr_2, hess_lens_arr_2)
         
-    cdef int freq_mod = freq_N//10
+    cdef int freq_mod
+    if freq_N//10 == 0:
+        freq_mod = freq_N
+    else:
+        freq_mod = freq_N//10
+
     cdef size_t vsize 
     
     reset() # reset counter and init lock                    
@@ -613,7 +642,12 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
     theta_step = (theta_max - theta_min) /  (theta_N - 1)
     SetGradientArrs( theta_N, theta_step, lens_arr_1, grad_lens_arr_1, hess_lens_arr_1)
             
-    cdef int freq_mod = freq_N//10
+    cdef int freq_mod
+    if freq_N//10 == 0:
+        freq_mod = freq_N
+    else:
+        freq_mod = freq_N//10
+
     cdef size_t vsize     
     
     reset() # reset counter and init lock            
