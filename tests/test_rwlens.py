@@ -4,13 +4,13 @@ import numpy as np
 from astropy import constants as c
 from astropy import cosmology
 from astropy import units as u
-from scipy.fft import rfftfreq,rfft,irfft
+from scipy.fft import rfftfreq, rfft, irfft
 
 import rwlenspy.lensing as rwl
 import rwlenspy.utils as utils
 
 
-def test_analyticgrav():
+def test_imageobservables():
     """
     Diagram of Lensing System setup.
     ####################################
@@ -112,6 +112,83 @@ def test_analyticgrav():
     return
 
 
+def test_analytictransferfunc():
+    """
+    Diagram of Lensing System setup.
+    ####################################
+    |              |               |
+    |              |               |
+    |              |               |
+    |              |               |
+    obs            r1             src
+    ####################################
+    """
+    cosmo = cosmology.Planck18
+    # Comoving
+    D_obs_src = cosmo.comoving_distance(1)
+    D_obs_len = cosmo.comoving_distance(1) / 2
+
+    # Redshift
+    z_obs_src = cosmology.z_at_value(cosmo.comoving_distance, D_obs_src)
+    z_obs_len = cosmology.z_at_value(cosmo.comoving_distance, D_obs_len)
+
+    # Ang. Diam. Dist
+    D_obs_src = cosmo.angular_diameter_distance(z_obs_src)
+    D_obs_len = cosmo.angular_diameter_distance(z_obs_len)
+    D_len_src = cosmo.angular_diameter_distance_z1z2(z_obs_len, z_obs_src)
+
+    # Physical Lens Params.
+    Eins_time_const = 4 * c.G * c.M_sun / c.c**3
+    const_D = D_len_src / (D_obs_len * D_obs_src)
+    mass = 1e-2  # solar mass
+    theta_E = np.sqrt(mass * Eins_time_const * c.c * const_D).to(u.m / u.m)
+    freq_ref = 800e6
+    dumpframes = 2048
+    freqs = freq_ref - rfftfreq(dumpframes, d=1 / freq_ref)
+    beta_x = 2.5
+    beta_y = 0.0
+
+    # Lens Parameters
+    geom_const = ((1 / (const_D * c.c)).to(u.s)).value
+    geom_const = geom_const * theta_E.value**2
+    lens_const = mass * Eins_time_const.to(u.s).value
+
+    nyqzone = True
+
+    # grav 2
+    # Solutions from Algorithm
+    print("Getting the transfer function with Algorithm...")
+    t1 = time()
+    transferfunc = rwl.RunGravTransferFunc(freqs, beta_x, beta_y, mass, nyqzone)
+    tv = time() - t1
+    print(
+        "Tranfer function obtained in:", tv, "s", " | ", tv / 60, "min", tv / 3600, "hr"
+    )
+    transferfunc = np.array(transferfunc).astype(np.cdouble)
+
+    # Analytic Solutions
+    _, delay_analytic, mag_analytic = utils.AnalyticPointMassGrav(
+        beta_x, geom_const, lens_const
+    )
+
+    delta_func = np.zeros(dumpframes)
+    delta_func[1] = 1
+    delta_func = rfft(delta_func)
+
+    analytic_tf = np.conj(mag_analytic[0]) * np.exp(
+        -1j * 2 * np.pi * freqs * delay_analytic[0]
+    ) + np.conj(mag_analytic[1]) * np.exp(-1j * 2 * np.pi * freqs * delay_analytic[1])
+
+    delta_analytic = irfft(analytic_tf)
+
+    delta_transfer = irfft(transferfunc)
+
+    assert np.argmax(delta_analytic) == np.argmax(delta_transfer)
+
+    assert (np.abs(delta_analytic - delta_transfer) < 1e-10).all()
+    return
+
+
 def test_transferfunc():
     """
     Diagram of Lensing System setup.
@@ -141,15 +218,16 @@ def test_transferfunc():
     Eins_time_const = 4 * c.G * c.M_sun / c.c**3
     const_D = D_len_src / (D_obs_len * D_obs_src)
     freq_ref = 800e6
-    mass = 0.01  # solar mass
+    mass = 1e-3  # solar mass
     theta_E = np.sqrt(mass * Eins_time_const * c.c * const_D).to(u.m / u.m)
     dumpframes = 2048
-    freqs = freq_ref - rfftfreq(dumpframes,d=1/freq_ref)
+    tres = 1 / 800e6
+    freqs = 800e6 - rfftfreq(dumpframes, d=tres)
     beta_x = 2.5
     beta_y = 0.0
 
     # Grid parameters
-    max_fres = 1
+    max_fres = 10
     theta_min = -max_fres
     theta_max = max_fres
     theta_N = 501
@@ -167,7 +245,8 @@ def test_transferfunc():
     lens_arr = -utils.LogLens(x1[None, :], x1[:, None])
     lens_arr = lens_arr.astype(np.double).ravel(order="C")
 
-    nyqalias = True
+    nyqzone = True
+
     # Solutions from Algorithm
     print("Getting the transfer function with Algorithm...")
     t1 = time()
@@ -183,7 +262,7 @@ def test_transferfunc():
         geom_const,
         lens_const,
         freq_power,
-        nyqalias
+        nyqzone,
     )
     tv = time() - t1
     print(
@@ -196,17 +275,28 @@ def test_transferfunc():
         beta_x, geom_const, lens_const
     )
 
-    delta_func = np.zeros(dumpframes)
-    delta_func[1] = 1
-    delta_func = rfft(delta_func)
-   
-    analytic_tf = mag_analytic[0]*np.exp(1j*2*np.pi*freqs*delay_analytic[0])\
-        + mag_analytic[1]*np.exp(1j*2*np.pi*freqs*delay_analytic[1])
+    analytic_tf = np.conj(mag_analytic[0]) * np.exp(
+        -1j * 2 * np.pi * freqs * delay_analytic[0]
+    ) + np.conj(mag_analytic[1]) * np.exp(-1j * 2 * np.pi * freqs * delay_analytic[1])
 
-    delta_analytic = irfft(delta_func*analytic_tf)
+    delta_analytic = irfft(analytic_tf)
 
-    delta_transfer = irfft(delta_func*transferfunc)
-    
-    assert np.argmax(delta_analytic) == np.argmax(delta_transfer)
-    
+    delta_transfer = irfft(transferfunc)
+
+    # check peaks line up in time
+    assert np.argmax(np.abs(delta_analytic)) == np.argmax(np.abs(delta_transfer))
+
+    corr_transfer = irfft(np.abs(transferfunc) ** 2)
+    expected_delay_ind = np.round(
+        np.abs(delay_analytic[0] - delay_analytic[1]) / (tres)
+    ).astype(int)
+
+    # check delayed signal is at expected delay
+    assert np.argmax(np.abs(corr_transfer[1:1024])) == expected_delay_ind
+
+    corr_zero_peak = np.sum(np.abs(mag_analytic) ** 2)
+
+    # Check if total image magnification is within error expectations
+    assert (np.abs(corr_transfer[0]) - corr_zero_peak) / corr_zero_peak < 1e-2
+
     return
