@@ -83,7 +83,7 @@ cdef extern from "rwlens.h":
     vector[physpoint]& dlens_arr, \
     vector[physpoint]& ddlens_arr, \
     double geom_fac, double lens_fac, \
-    physpoint betav) nogil
+    physpoint betav, bint nyqzone_aliased) nogil
 
     double complex GetTwoPlaneTransferFuncVal(
 	double theta_step,
@@ -105,7 +105,8 @@ cdef extern from "rwlens.h":
     double lens_fac2,    
     double multilens_12_scale,        
 	physpoint beta1,
-	physpoint lens12_offset) nogil
+	physpoint lens12_offset,
+    bint nyqzone_aliased) nogil
 
     double complex GetPlanePMGravTransferFuncVal(
 	double theta_step,
@@ -122,12 +123,14 @@ cdef extern from "rwlens.h":
 	double mass,
 	physpoint betaE_v,
 	physpoint betav,
-    double multilens_scale) nogil
+    double multilens_scale,
+    bint nyqzone_aliased) nogil
     
     double complex GetPMGravTransferFuncVal(
     double freq,
     double mass,
-    physpoint betav) nogil
+    physpoint betav,
+    bint nyqzone_aliased) nogil
     
     double complex GetGravTransferFuncVal(
 	double theta_step,

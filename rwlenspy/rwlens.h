@@ -39,7 +39,8 @@ std::complex<double> GetTransferFuncVal(
 	const std::vector<physpoint> &ddlens_arr,	
     const double geom_fac,    
     const double lens_fac,
-	const physpoint betav
+	const physpoint betav,
+    const bool nyqzone_aliased    
 );
 
 std::complex<double> GetTwoPlaneTransferFuncVal(
@@ -62,7 +63,8 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
     const double lens_fac2,    
     const double multilens_12_scale,        
 	const physpoint beta1,
-	const physpoint lens12_offset    
+	const physpoint lens12_offset,
+    const bool nyqzone_aliased    
 );
 
 std::complex<double> GetPlanePMGravTransferFuncVal(
@@ -80,13 +82,15 @@ std::complex<double> GetPlanePMGravTransferFuncVal(
 	const double mass,
 	const physpoint betaE_v,
 	const physpoint betav,
-    const double multilens_scale
+    const double multilens_scale,
+    const bool nyqzone_aliased    
 );
 
 std::complex<double> GetPMGravTransferFuncVal(
 	const double freq,
 	const double mass,
-	const physpoint betav
+	const physpoint betav,
+    const bool nyqzone_aliased    
 );
 
 void GetFreqImage(
@@ -164,6 +168,14 @@ std::complex<double> GetMag(
 	const double lens_param
 );
 
+double GetLensDelay(
+    const double lens_fac,
+    const double freq,
+    const double freq_ref,
+    const double freq_power,
+    const double lens_arr_val
+);
+
 std::complex<double> GetImgVal(
     const int itheta,
     const int jtheta,
@@ -177,7 +189,8 @@ std::complex<double> GetImgVal(
 	const std::vector<physpoint> &ddlens_arr,
     const double geom_fac,    
     const double lens_fac,
-	const physpoint betav
+	const physpoint betav,
+    const bool nyqzone_aliased    
 );
 
 void SetGeometricDelayArr(

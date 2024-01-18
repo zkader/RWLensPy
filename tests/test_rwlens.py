@@ -167,6 +167,7 @@ def test_transferfunc():
     lens_arr = -utils.LogLens(x1[None, :], x1[:, None])
     lens_arr = lens_arr.astype(np.double).ravel(order="C")
 
+    nyqalias = True
     # Solutions from Algorithm
     print("Getting the transfer function with Algorithm...")
     t1 = time()
@@ -182,6 +183,7 @@ def test_transferfunc():
         geom_const,
         lens_const,
         freq_power,
+        nyqalias
     )
     tv = time() - t1
     print(

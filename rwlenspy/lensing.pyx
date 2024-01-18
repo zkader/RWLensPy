@@ -29,7 +29,8 @@ cpdef vector[complex] RunUnitlessTransferFunc(
                                        double beta_y,
                                        double geom_const,
                                        double lens_const,
-                                       double freq_power
+                                       double freq_power,
+                                       bint nyqzone_aliased
                                        ):
     """Get the propagation transfer function for a single lens.
 
@@ -55,6 +56,8 @@ cpdef vector[complex] RunUnitlessTransferFunc(
         geom_const (double): The geometric parameter [s]
         lens_const (double): The lens parameter [s]
         freq_power (double): The power relation of the lens.
+        nyqzone_aliased (bool): Evaluate the transfer function for 
+                                the aliased Nyquist zone if True.  
 
     Returns:
         array[complex] : The propagated transfer function.
@@ -91,7 +94,7 @@ cpdef vector[complex] RunUnitlessTransferFunc(
             tfunc[freq_ii] = GetTransferFuncVal( theta_step, theta_N, theta_min,\
                                                 freq_val, freq_ref, freq_power, lens_arr, grad_lens_arr,\
                                                hess_lens_arr, geom_const, lens_const, \
-                                               beta_vec)
+                                               beta_vec, nyqzone_aliased)
             report(freq_mod,freq_N)
     destroy() # release lock
     
@@ -113,7 +116,8 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
                                        double eins,
                                        double beta_E_x,
                                        double beta_E_y,                                                    
-                                       double mass
+                                       double mass,
+                                       bint nyqzone_aliased
                                        ):
     """Get the propagation transfer function through two lenses (any + grav).
 
@@ -146,6 +150,8 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
         beta_E_x (double): The X center of plane 1 from plane 2. [ul]
         beta_E_y (double): The y center of plane 1 from plane 2. [ul]
         mass (double): The mass of the gravitational lens. [M_sol]
+        nyqzone_aliased (bool): Evaluate the transfer function for 
+                                the aliased Nyquist zone if True.          
 
     Returns:
         array[complex] : The propagated transfer function.
@@ -186,7 +192,7 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
             tfunc[freq_ii] = GetPlanePMGravTransferFuncVal( theta_step, theta_N, theta_min, freq_val,\
                                                       freq_ref, freq_power, lens_arr, grad_lens_arr,\
                                                       hess_lens_arr, geom_const, lens_const, mass,\
-                                                      beta_E_vec, beta_vec, lens_scaling)
+                                                      beta_E_vec, beta_vec, lens_scaling, nyqzone_aliased)
             report(freq_mod,freq_N)
     destroy() # release lock            
     return tfunc
@@ -210,8 +216,9 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
                                        double beta_2_y,
                                        double geom_const_2,
                                        double lens_const_2,
-                                       double freq_power_2    
-                                       ):
+                                       double freq_power_2,
+                                       bint nyqzone_aliased
+):
     """Get the propagation transfer function through two lenses (any + any).
 
     This function will obtain the transfer function for a single 
@@ -249,6 +256,8 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
         geom_const_2 (double): The geometric parameter on plane 2. [s]
         lens_const_2 (double): The lens parameter on plane 2. [s]
         freq_power_2 (double): The power relation of the lens on plane 2.
+        nyqzone_aliased (bool): Evaluate the transfer function for 
+                                the aliased Nyquist zone if True.          
 
     Returns:
         array[complex] : The propagated transfer function.
@@ -294,7 +303,7 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
                                 freq_val, freq_ref, freq_power_1, lens_arr_1, grad_lens_arr_1,\
                                 hess_lens_arr_1, geom_const_1, lens_const_1, freq_power_2,\
                                 lens_arr_2, grad_lens_arr_2, hess_lens_arr_2, geom_const_2,\
-                                lens_const_2, lens_scaling, beta_1_vec, beta_2_vec) 
+                                lens_const_2, lens_scaling, beta_1_vec, beta_2_vec, nyqzone_aliased) 
             
             report(freq_mod,freq_N)
     destroy() # release lock            
@@ -304,8 +313,9 @@ cpdef vector[complex] RunGravTransferFunc(
                                        vector[double] freq_arr,
                                        double beta_x,
                                        double beta_y,    
-                                       double mass
-                                       ):
+                                       double mass,
+                                       bint nyqzone_aliased                                       
+):
     """Get the propagation transfer function through a gravitational lens.
 
     This function will obtain the transfer function for a single 
@@ -323,6 +333,8 @@ cpdef vector[complex] RunGravTransferFunc(
         beta_x (double): The X position of the source from plane 1. [ul]
         beta_y (double): The Y position of the source from plane 1. [ul]
         mass (double): The mass of the gravitational lens. [M_sol]
+        nyqzone_aliased (bool): Evaluate the transfer function for 
+                                the aliased Nyquist zone if True.  
 
     Returns:
         array[complex] : The propagated transfer function.
@@ -349,7 +361,7 @@ cpdef vector[complex] RunGravTransferFunc(
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
             
-            tfunc[freq_ii] = GetPMGravTransferFuncVal( freq_val, mass, beta_vec)
+            tfunc[freq_ii] = GetPMGravTransferFuncVal( freq_val, mass, beta_vec, nyqzone_aliased)
 
             report(freq_mod,freq_N)
     destroy() # release lock

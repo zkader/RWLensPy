@@ -12,7 +12,8 @@ std::complex<double> GetTransferFuncVal(
 	const std::vector<physpoint> &ddlens_arr,
     const double geom_fac,    
     const double lens_fac,
-	const physpoint betav
+	const physpoint betav,
+    const bool nyqzone_aliased
 	)
 {
 	std::complex<double> tfunc_val = 0.0 + I*0.0;    
@@ -26,19 +27,19 @@ std::complex<double> GetTransferFuncVal(
             // check if there exists a stationary point in the grid cell
 			if( IsStationary( itheta, jtheta, theta_N,
 							theta_step, theta_min,	
-							dlens_arr, lens_param, betav )){
-				
+							dlens_arr, lens_param, betav ))
+            {
                 // Get the phase delay and magnification of the image
                 tempval = GetImgVal( itheta, jtheta, theta_step, theta_N, 
                                     theta_min, freq, freq_ref, freq_power,        
-                                    lens_arr, ddlens_arr, geom_fac, lens_fac,betav);
+                                    lens_arr, ddlens_arr, geom_fac, lens_fac,
+                                    betav, nyqzone_aliased);
                                     
                 tfunc_val += tempval; //add image to frequency
-			}
+            }
         }
     }
-
-    return tfunc_val ;
+    return tfunc_val;
 } 
 
 std::complex<double> GetTwoPlaneTransferFuncVal(
@@ -61,15 +62,17 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
     const double lens_fac2,    
     const double multilens_12_scale,        
 	const physpoint beta1,
-	const physpoint lens12_offset
+	const physpoint lens12_offset,
+    const bool nyqzone_aliased    
     )
 {
-	std::complex<double> tfunc_val = 0.0 + I*0.0;   
+	std::complex<double> tfunc_val = 0.0 + I*0.0;      
+    std::complex<double> tempval;
     double lens_param1 = lens_fac1 * pow(freq,freq_power1) / geom_fac1 ;
     double lens_param2 = lens_fac2 * pow(freq,freq_power2) / geom_fac2 ;
     
     double theta1_x, theta1_y, theta2_x, theta2_y;
-    double geomdelay1, phase1, geomdelay2, phase2, geomphase;    
+    double geomdelay1, lensdelay1, phase1, geomdelay2, lensdelay2, phase2;
     std::complex<double> mag1, mag2;
     
     physpoint beta2;
@@ -81,22 +84,19 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
             // check if there exists a stationary point in the grid cell        
 			if( IsStationary( itheta, jtheta, theta_N,
 							theta_step, theta_min,	
-							dlens_arr1, lens_param1, beta1 )){
+							dlens_arr1, lens_param1, beta1 ))
+            {
 				theta1_x  = theta_step * jtheta + theta_min;				    			
 				theta1_y  = theta_step * itheta + theta_min;					
 					
-				geomdelay1 = geom_fac1*0.5*( pow( theta1_x - beta1.valx ,2.0) + pow( theta1_y - beta1.valy ,2.0));
-				
-                // check if there exists a stationary point in the grid cell                        
-                if(freq_power1 != 0.0)
-                {
-                    geomphase =  2 * pi * (freq) * geomdelay1;
-                    phase1 = geomphase +  2 * pi * freq * lens_fac1 * ( pow( freq_ref,freq_power1) - pow( freq,freq_power1) )* lens_arr1[jtheta + theta_N * itheta] ;
-                }else
-                {
-                    phase1 = geomdelay1 + lens_fac1 * pow( freq,freq_power1) * lens_arr1[jtheta + theta_N * itheta] ;
-                    phase1 = phase1 * 2 * pi * freq ;                                        
-                }            
+				geomdelay1 = geom_fac1*0.5*( pow( theta1_x - beta1.valx ,2.0)\
+                            + pow( theta1_y - beta1.valy ,2.0));
+
+                lensdelay1 = GetLensDelay(lens_fac1, freq,\
+                                        freq_ref, freq_power1,\
+                                        lens_arr1[jtheta + theta_N * itheta]);
+
+                phase1 = 2 * pi * freq * ( geomdelay1 + lensdelay1 );                
 				mag1 = GetMag(itheta, jtheta, theta_N, ddlens_arr1, lens_param1);				
                 
                 beta2.valx = multilens_12_scale*theta1_x + lens12_offset.valx;
@@ -114,27 +114,34 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
                             theta2_x  = theta_step * ltheta + theta_min;				    			
                             theta2_y  = theta_step * ktheta + theta_min;					
 
-                            geomdelay2 = geom_fac2*0.5*( pow( theta2_x - beta2.valx ,2.0) + pow( theta2_y - beta2.valy ,2.0));
+                            geomdelay2 = geom_fac2*0.5*( pow( theta2_x - beta2.valx ,2.0)\
+                                        + pow( theta2_y - beta2.valy ,2.0));
 
-                            if(freq_power2 != 0.0)
-                            {
-                                geomphase =  2 * pi * (freq) * geomdelay2;
-                                phase2 = geomphase +  2 * pi * freq * lens_fac2 * ( pow( freq_ref,freq_power2) - pow( freq,freq_power2) )* lens_arr2[ktheta + theta_N * ltheta] ;
-                            }else
-                            {
-                                phase2 = geomdelay2 + lens_fac2 * lens_arr2[ktheta + theta_N * ltheta] ;
-                                phase2 = phase2 * 2 * pi * freq ;                                        
-                            }            
+                            lensdelay2 = GetLensDelay(lens_fac2, freq,\
+                                            freq_ref, freq_power2,\
+                                            lens_arr2[ktheta + theta_N * ltheta]);
+
+                            phase2 = 2 * pi * freq * ( geomdelay2 + lensdelay2 );
                             mag2 = GetMag(ktheta, ltheta, theta_N, ddlens_arr2, lens_param2);				
               
-                            tfunc_val =  tfunc_val + std::conj(mag2)*std::conj(mag1)* std::complex<double>( cos(phase1+phase2), sin(phase1+phase2));				
+                            tempval = mag1*mag2*\
+                                            std::complex<double>(
+                                            cos(phase1+phase2),
+                                            sin(phase1+phase2));      
+                        
+                            // conj if evaluating in aliased nyq zone
+                            if(nyqzone_aliased)
+                            {
+                                tempval = std::conj(tempval);
+                            }
+                            tfunc_val += tempval;
                         }
                     }
                 }
 			}
         }
     }
-    return tfunc_val ;
+    return tfunc_val;
 }
 
 
@@ -153,16 +160,17 @@ std::complex<double> GetPlanePMGravTransferFuncVal(
 	const double mass,
 	const physpoint betaE_v,
 	const physpoint betav,
-    const double multilens_scale
+    const double multilens_scale,
+    const bool nyqzone_aliased
 	)
 {
 	double eins = 1.0; //unitless
 	std::complex<double> tfunc_val = 0.0 + I*0.0;   
     double lens_param = lens_fac * pow(freq,freq_power) / geom_fac ;
     double theta_x,theta_y;
-    double geomdelay, imgphase, phase;
+    double geomdelay, lensdelay, imgphase, phase;
 	physpoint sourcepos,imagepos;
-    std::complex<double> mag, imgmag;
+    std::complex<double> mag, imgmag, tempval;
     
 	for(int itheta = 2; itheta < theta_N - 2; itheta++) 
     {
@@ -170,38 +178,52 @@ std::complex<double> GetPlanePMGravTransferFuncVal(
         {
 			if( IsStationary( itheta, jtheta, theta_N,
 							theta_step, theta_min,	
-							dlens_arr, lens_param, betav )){
+							dlens_arr, lens_param, betav ))
+            {
 				theta_x  = theta_step * jtheta + theta_min;				    			
 				theta_y  = theta_step * itheta + theta_min;					
 					
 				geomdelay = geom_fac*0.5*( pow( theta_x - betav.valx ,2.0) + pow( theta_y - betav.valy ,2.0));
 				
-                if(freq_power != 0.0)
-                {
-                    double geomphase =  2 * pi * (freq) * geomdelay;
-                    phase = geomphase +  2 * pi * freq * lens_fac * ( pow( freq_ref,freq_power) - pow( freq,freq_power) )* lens_arr[jtheta + theta_N * itheta] ;
-                }else
-                {
-                    phase = geomdelay + lens_fac * lens_arr[jtheta + theta_N * itheta] ;
-                    phase = phase * 2 * pi * freq ;                                        
-                }                
-            
+                lensdelay = GetLensDelay(lens_fac, freq,\
+                                        freq_ref, freq_power,\
+                                        lens_arr[jtheta + theta_N * itheta]);
+
+                phase = 2 * pi * freq * ( geomdelay + lensdelay );
 				mag = GetMag(itheta, jtheta, theta_N, ddlens_arr, lens_param);
 												
 				sourcepos.valx = multilens_scale*theta_x + betaE_v.valx;				
 				sourcepos.valy = multilens_scale*theta_y + betaE_v.valy;
 
+                // first pm grav solution
 				imagepos = map_grav_p(sourcepos, eins);
 				imgmag = grav_magval(imagepos, eins);
 				imgphase = grav_delayval(imagepos, sourcepos, eins, mass);
 				imgphase = imgphase * 2 * pi * freq;
-                tfunc_val = tfunc_val + std::conj(imgmag) * std::conj(mag)*std::complex<double>( cos(phase+imgphase), sin(phase+imgphase));       
-            				
+                tempval = imgmag * mag *std::complex<double>(
+                            cos(phase+imgphase), sin(phase+imgphase));
+
+                // conj if evaluating in aliased nyq zone
+                if(nyqzone_aliased)
+                {
+                    tempval = std::conj(tempval);
+                }
+                tfunc_val += tempval;       
+            	
+                // second pm grav solution
 				imagepos = map_grav_m(sourcepos, eins);
 				imgmag = grav_magval(imagepos, eins);
 				imgphase = grav_delayval(imagepos, sourcepos, eins, mass);								
 				imgphase = imgphase * 2 * pi * freq;
-                tfunc_val = tfunc_val + std::conj(imgmag) * std::conj(mag)*std::complex<double>( cos(phase+imgphase), sin(phase+imgphase));       
+                tempval = imgmag * mag *std::complex<double>(
+                            cos(phase+imgphase), sin(phase+imgphase));
+                
+                // conj if evaluating in aliased nyq zone
+                if(nyqzone_aliased)
+                {
+                    tempval = std::conj(tempval);
+                }
+                tfunc_val += tempval;
 			}
         }
     }
@@ -212,29 +234,45 @@ std::complex<double> GetPlanePMGravTransferFuncVal(
 std::complex<double> GetPMGravTransferFuncVal(
 	const double freq,
 	const double mass,
-	const physpoint betav
+	const physpoint betav,
+    const bool nyqzone_aliased    
 	)
 {
 	double eins = 1.0; //unitless
 	std::complex<double> tfunc_val = 0.0 + I*0.0;
     double imgphase;
 	physpoint sourcepos,imagepos;
-    std::complex<double> imgmag;
+    std::complex<double> imgmag, tempval;
     
     imagepos = map_grav_p(betav, eins);
     imgmag = grav_magval(imagepos, eins);
     imgphase = grav_delayval(imagepos, betav, eins, mass);    
 	imgphase = imgphase * 2 * pi * freq;
+    tempval = imgmag * std::complex<double>(
+                cos(imgphase), sin(imgphase));
+
+    // conj if evaluating in aliased nyq zone
+    if(nyqzone_aliased)
+    {
+        tempval = std::conj(tempval);
+    }
+    tfunc_val += tempval;
     
-    tfunc_val = tfunc_val + std::conj(imgmag) * std::complex<double>( cos(imgphase), sin(imgphase));
-            				
     imagepos = map_grav_m(betav, eins);
     imgmag = grav_magval(imagepos, eins);
     imgphase = grav_delayval(imagepos, betav, eins, mass);								
     imgphase = imgphase * 2 * pi * freq;
-    tfunc_val = tfunc_val + std::conj(imgmag) * std::complex<double>( cos(imgphase), sin(imgphase));       
+    tempval = imgmag * std::complex<double>(
+                cos(imgphase), sin(imgphase));
+
+    // conj if evaluating in aliased nyq zone
+    if(nyqzone_aliased)
+    {
+        tempval = std::conj(tempval);
+    }
+    tfunc_val += tempval;
 	
-    return tfunc_val ;
+    return tfunc_val;
 }
 
 void GetFreqImage(
@@ -502,7 +540,12 @@ bool IsStationary(
     return false;
 }
 
-std::complex<double> GetMag(const int itheta, const int jtheta, const int theta_N, const std::vector<physpoint> &mag_arr, const double lens_param)
+std::complex<double> GetMag(
+    const int itheta,
+    const int jtheta,
+    const int theta_N,
+    const std::vector<physpoint> &mag_arr,
+    const double lens_param)
 {
     // Get the magnification of the lens through the hessian
 	std::complex<double> magvalcntr, magvalup, magvaldown, magvalleft, magvalright;	
@@ -533,6 +576,26 @@ std::complex<double> GetMag(const int itheta, const int jtheta, const int theta_
 	}
 }
 
+double GetLensDelay(
+    const double lens_fac,
+    const double freq,
+    const double freq_ref,
+    const double freq_power,
+    const double lens_arr_val
+){
+    double lens_delay = 0;    
+    if(freq_power != 0.0)
+    {
+        lens_delay = lens_fac * ( pow( freq, freq_power)
+                            -  pow( freq_ref,freq_power) )\
+                            * lens_arr_val ;        
+    }else
+    {
+        lens_delay = lens_fac * lens_arr_val ;
+    }  
+    return lens_delay;
+}
+
 std::complex<double> GetImgVal(
     const int itheta,
     const int jtheta,
@@ -546,34 +609,36 @@ std::complex<double> GetImgVal(
 	const std::vector<physpoint> &ddlens_arr,
     const double geom_fac,    
     const double lens_fac,
-	const physpoint betav
+	const physpoint betav,
+    const bool nyqzone_aliased    
 ){
     // Set the values of the geometric delay on a grid
-    double phase;
+    double phase, geomdelay, lensdelay;
     double theta_x  = theta_step * jtheta + theta_min;				    			
     double theta_y  = theta_step * itheta + theta_min;					
     double lens_param = lens_fac * pow(freq,freq_power) / geom_fac ;
     std::complex<double> mag;
 
     // geometric delay
-    double geomdelay = geom_fac*0.5*( pow( theta_x - betav.valx ,2.0) + pow( theta_y - betav.valy ,2.0));
+    geomdelay = geom_fac*0.5*( pow( theta_x - betav.valx ,2.0) + pow( theta_y - betav.valy ,2.0));
 
     // lensing delay
-    if(freq_power != 0.0)
-    {
-        double geomphase =  2 * pi * freq * geomdelay;
-        phase = geomphase +  2 * pi * freq * lens_fac \
-        *( pow( freq_ref,freq_power) - pow( freq,freq_power) )\
-        *lens_arr[jtheta + theta_N * itheta] ;
-    }else
-    {
-        phase = geomdelay + lens_fac * lens_arr[jtheta + theta_N * itheta] ;
-        phase = phase * 2 * pi * freq ;                                        
-    }
+    lensdelay = GetLensDelay(lens_fac, freq,\
+                            freq_ref, freq_power,\
+                            lens_arr[jtheta + theta_N * itheta]);
+                            
+    phase = 2 * pi * freq * ( geomdelay + lensdelay );
 
     // get the image magnification
     mag = GetMag(itheta, jtheta, theta_N, ddlens_arr, lens_param);
-    mag = std::conj(mag)*std::complex<double>( cos(phase), sin(phase));
+    
+    // get image phase
+    mag = mag*std::complex<double>( cos(phase), sin(phase));
+
+    // conj if evaluating in aliased nyq zone
+    if(nyqzone_aliased){
+        mag = std::conj(mag);
+    }
     
     return mag;
 }
