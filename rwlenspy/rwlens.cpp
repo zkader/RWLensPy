@@ -567,7 +567,7 @@ std::complex<double> GetMag(
     // Check for 0 in the hessian i.e. a caustic point within the grid cell
     if( (StatCellCheck(fabs(magvalcntr),fabs(magvalleft)) || StatCellCheck(fabs(magvalcntr),fabs(magvalright))) 
        && (StatCellCheck(fabs(magvalcntr),fabs(magvalup)) || StatCellCheck(fabs(magvalcntr),fabs(magvaldown))) ){
-        std::cout << "Warning: No curvature / Caustic at " << itheta << "," << jtheta <<"\n" ;			
+        std::cout << "Warning: No curvature / Caustic at " << itheta << "," << jtheta << std::endl;			
 		return 0.0+I*0.0;                
     }else
 	{
@@ -621,17 +621,17 @@ std::complex<double> GetImgVal(
 
     // geometric delay
     geomdelay = geom_fac*0.5*( pow( theta_x - betav.valx ,2.0) + pow( theta_y - betav.valy ,2.0));
-
+    
     // lensing delay
     lensdelay = GetLensDelay(lens_fac, freq,\
                             freq_ref, freq_power,\
                             lens_arr[jtheta + theta_N * itheta]);
-                            
+    
     phase = 2 * pi * freq * ( geomdelay + lensdelay );
 
     // get the image magnification
     mag = GetMag(itheta, jtheta, theta_N, ddlens_arr, lens_param);
-    
+
     // get image phase
     mag = mag*std::complex<double>( cos(phase), sin(phase));
 
