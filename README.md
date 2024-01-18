@@ -6,20 +6,17 @@ The code can be installed with:
 
 `pip install rwlenspy`
 
-## Propagation Transfer Function
+## Examples
 
-## Spatial Images
+For examples see `tests/examples/`. The image ray trace is shown in the `example_animate_*.py` files and how to get the coherent transfer function for a baseband simulation is shown in `example_transfer*.py`.
 
-## Multiplane Systems
+## Custom/Dev Install
 
-## Custom Install
-
-The package is built with Poetry and Cython using C++11 and OpenMP. This requires having a compiler for  If one requires a dev install, this can be done with:
+The package is built with Poetry and Cython using C++11 and OpenMP. This requires having a compiler like `gcc` if one is editing the code. If one requires a dev install, this can be done with:
 
 `poetry install --with test,dev`
 `poetry run python`
 
-Poetry installs the package within it's virtual environment. Tests can be run with:
+Once installed, tests can be run with:
 
 `poetry run pytest`
-
