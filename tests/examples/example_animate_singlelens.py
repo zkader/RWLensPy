@@ -151,7 +151,7 @@ ax.set_ylabel(f"$\\theta_Y$ [{axisstr}arcsec]", size=14)
 ax.set_xlabel(f"$\\theta_X$ [{axisstr}arcsec]", size=14)
 ax.set_facecolor("black")
 cmap = cmaps.gray
-norm = LogNorm(vmin=1e-2, vmax=1)
+norm = LogNorm(vmin=1e-3, vmax=1)
 axsc.set_cmap(cmap)
 axsc.set_norm(norm)
 cb = fig.colorbar(cmaps.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
@@ -215,8 +215,8 @@ ax.set_xlim(
 )
 ax.set_ylabel(f"Freq. [{freq_axis_str}Hz]")
 ax.set_xlabel(f"Time [{time_axis_str}s]")
-cmap = cmaps.gray
-norm = LogNorm(vmin=1e-2, vmax=1)
+cmap = cmaps.binary
+norm = LogNorm(vmin=1e-3, vmax=1)
 axsc.set_cmap(cmap)
 axsc.set_norm(norm)
 cb = fig.colorbar(cmaps.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
@@ -255,4 +255,81 @@ ani = matplotlib.animation.FuncAnimation(
 # save
 save_path = Path.cwd()
 save_path = save_path / "singelens_baseband_arrival.gif"
+ani.save(filename=str(save_path), writer="pillow")
+
+"""
+#######################################
+#### Animate Temporal and Spatial #####
+#######################################
+"""
+# setup time
+total_frames = 100
+left_edge = -total_frames // 4
+right_edge = total_frames + left_edge
+time_res = 2.56e-6  # s
+trange = np.arange(-1, total_frames + 2) * time_res + left_edge * time_res
+fmin = np.amin(fvals)
+
+# Setup plot
+fig = plt.figure()
+ax = fig.add_subplot(111)
+axsc = ax.scatter([], [], s=4)
+axisscale = 1e0
+axisstr = ""
+framescale = 1e6
+framestr = "M"
+scaling = scale * 206264.806247 / axisscale
+
+# Select largest spatial extent
+cut1 = fvals == np.amin(fmin)  # lowest freq for scattering
+maxv_ = (
+    max(np.amax(np.abs(txvals[cut1])), np.amax(np.abs(tyvals[cut1]))) * scaling * 1.1
+)
+
+# Set axes and plot
+ax.set_ylim(-maxv_, maxv_)
+ax.set_xlim(-maxv_, maxv_)
+ax.set_ylabel(f"$\\theta_Y$ [{axisstr}arcsec]", size=14)
+ax.set_xlabel(f"$\\theta_X$ [{axisstr}arcsec]", size=14)
+ax.set_facecolor("black")
+cmap = cmaps.gray
+norm = LogNorm(vmin=1e-3, vmax=1)
+axsc.set_cmap(cmap)
+axsc.set_norm(norm)
+cb = fig.colorbar(cmaps.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
+cb.ax.set_title("Img. Mag.", y=1.02)
+
+# image framing
+image_duration = 2  # seconds
+frame_interval = 30e-3  # seconds between frames
+total_aniframes = image_duration / frame_interval
+stepsize = np.ceil((trange.size - 1) / total_aniframes).astype(int)
+
+if stepsize == 0:
+    stepsize = 1
+
+trange_inds = np.arange(0, trange.size - 1, step=stepsize)
+
+
+# frame animation
+def update(i):
+    tcutt = (delayvals[cut1] > trange[trange_inds[i]]) * (
+        delayvals[cut1] <= trange[trange_inds[i + 1]]
+    )
+
+    data = np.stack([txvals[cut1][tcutt] * scaling, tyvals[cut1][tcutt] * scaling]).T
+    axsc.set_offsets(data)
+    axsc.set_array(np.abs(magvals[cut1][tcutt]))
+    ax.set_title(f"Freq: {fmin/framescale:.0f} [{framestr}Hz] ", size=14)
+    return (axsc,)
+
+
+# animate
+ani = matplotlib.animation.FuncAnimation(
+    fig, update, frames=trange_inds.size - 1, interval=30, blit=True
+)
+
+# save
+save_path = Path.cwd()
+save_path = save_path / "singlelens_baseband_spatial_arrival.gif"
 ani.save(filename=str(save_path), writer="pillow")

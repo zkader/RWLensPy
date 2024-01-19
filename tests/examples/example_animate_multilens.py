@@ -1,125 +1,145 @@
-import numpy as np
+from pathlib import Path
 from time import time
-from scipy.fft import rfftfreq
 
-from astropy import units as u
+import matplotlib as mpl
+import matplotlib.animation
+import matplotlib.cm as cmaps
+import matplotlib.pyplot as plt
+import numpy as np
 from astropy import constants as c
 from astropy import cosmology
+from astropy import units as u
+from matplotlib.colors import LogNorm
+from scipy.fft import rfftfreq
 
 import rwlenspy.lensing as rwl
+from rwlenspy.utils import LogLens, RandomGaussianLens
 
+# Matplotlib setup
+GREYMAP = mpl.cm.__dict__["Greys"]
+mpl.rcParams["figure.figsize"] = [8.0, 6.0]
+mpl.rcParams["figure.dpi"] = 80
+mpl.rcParams["savefig.dpi"] = 100
+mpl.rcParams["font.size"] = 12
+mpl.rcParams["legend.fontsize"] = "large"
+mpl.rcParams["figure.titlesize"] = "large"
+mpl.rcParams["agg.path.chunksize"] = 10000
+plt.rcParams["savefig.dpi"] = 70
 
+"""
+############################
+#### Lensing Ray Trace #####
+############################
+"""
+
+"""
+Diagram of Lensing System setup.
+############################################################
+# |              |               |              |
+# |              |               |              |
+# |              |               |              |
+# |              |               |              |
+# obs            r1             r2              src
+############################################################
+"""
 cosmo = cosmology.Planck18
 
-############################################################
-# |              |               |
-# |              |               |
-# |              |               |
-# |              |               |
-# obs            r1             src  
-############################################################
-
 # Comoving
-# D_from_to
-D_obs_src = 1*u.Gpc 
-D_obs_r1 = 1*u.kpc
+D_obs_src = 1 * u.Gpc
+D_obs_r1 = D_obs_src / 2
+D_obs_r2 = 3 * D_obs_src / 4
 
-print(D_obs_src,D_obs_r1)
-z_obs_r1 = 0 
-z_obs_src = cosmology.z_at_value(cosmo.comoving_distance,D_obs_src)
-
-print(z_obs_src,z_obs_r1)
-Eins_time_const = 4*c.G*c.M_sun/c.c**3
+# redshift
+z_obs_r1 = cosmology.z_at_value(cosmo.comoving_distance, D_obs_r1)
+z_obs_r2 = cosmology.z_at_value(cosmo.comoving_distance, D_obs_r2)
+z_obs_src = cosmology.z_at_value(cosmo.comoving_distance, D_obs_src)
 
 # Ang. Diam. Distance
-D_obs_r1 = 1*u.kpc
-D_obs_src = cosmo.angular_diameter_distance(z_obs_src) - 1*u.pc
-D_r2_src =  cosmo.angular_diameter_distance(z_obs_src) - 1*u.pc - 1*u.kpc
+D_obs_r1 = cosmo.angular_diameter_distance(z_obs_r1)
+D_obs_r2 = cosmo.angular_diameter_distance(z_obs_r2)
+D_r1_r2 = cosmo.angular_diameter_distance_z1z2(z_obs_r1, z_obs_r2)
+D_obs_src = cosmo.angular_diameter_distance(z_obs_src)
+D_r2_src = cosmo.angular_diameter_distance_z1z2(z_obs_r2, z_obs_src)
 
-const_r1 = D_r2_src / (D_obs_r1 * D_obs_src)
+# Physical Lens (r2) Params
+r_e = c.alpha**2 * c.a0  # classical electron radius
+kdm = (
+    (r_e * c.c / (2 * np.pi)).to(u.cm**2 / u.s)
+    * ((1.0 * u.pc / u.cm).to(u.m / u.m)).value
+).value
+const_Dr2 = D_r2_src / (D_obs_r2 * D_obs_src)
+lens_r2_scale = (5000 * u.AU / D_obs_r2).to(u.m / u.m)
+scale_r2 = lens_r2_scale.value
+sig_DM = 0.0005
+geom_const_r2 = ((1 / (const_Dr2 * c.c)).to(u.s)).value
+geom_const_r2 = geom_const_r2 * scale_r2**2
+lens_const_r2 = kdm * sig_DM
+freq_power_r2 = -2.0
+beta_r2_x = 0.0
+beta_r2_y = 0.0
 
-freq0 = 400E6 * u.Hz
-r_e = c.alpha**2 * c.a0 # classical electron radius
-kdm = ((r_e * c.c  /( 2 * np.pi)).to(u.cm**2/u.s) * ((1.0*u.pc/u.cm).to(u.m/u.m)).value).value
+# Physical Lens (r1) Params
+Eins_time_const = 4 * c.G * c.M_sun / c.c**3
+const_Dr1 = D_r1_r2 / (D_obs_r1 * D_obs_r2)
+mass = 1  # solar mass
+lens_r1_scale = np.sqrt(mass * Eins_time_const * c.c * const_Dr1).to(u.m / u.m)
+scale_r1 = lens_r1_scale.value
+geom_const_r1 = ((1 / (const_Dr1 * c.c)).to(u.s)).value
+geom_const_r1 = geom_const_r1 * scale_r1**2
+lens_const_r1 = mass * Eins_time_const.to(u.s).value
+freq_power_r1 = 0
+beta_r1_x = 1.5
+beta_r1_y = 0.0
 
-mass = 10 #solar mass
-
-p_scale = ( 5.670047618847658*u.AU / D_obs_r1).to(u.m/u.m) 
-
-#theta_fres0 = np.sqrt(c.c/(2*np.pi*freq0) * const_r2).to(u.m/u.m)
-#theta_E = np.sqrt( mass*Eins_time_const*c.c*const_r1 ).to(u.m/u.m)
-
-theta_char = 1.0
-max_fres = 7.0
-
-theta_min = -max_fres#.value
-theta_max = max_fres#.value
-theta_N = 201
-
-dump_frames = 5000 # 5 hrs?
-#dump_frames = 500 # 5 hrs?
-freqs = np.asarray([800e6,400e6])# 800e6 - rfftfreq(2048*dump_frames, d=1/(800e6)) #MHz
-
+# Sim Parameters
 freq_ref = 800e6
+freqs = 800e6 - rfftfreq(2048, d=1 / (800e6))  # MHz
+nyqalias = True
 
-beta_x = 0.0
-beta_y = 0.0
+# Grid Parameters
+max_fres = 5
+theta_min = -max_fres
+theta_max = max_fres
+theta_N = 251
 
-kdm = ((r_e * c.c  /( 2 * np.pi)).to(u.cm**2/u.s) * ((1.0*u.pc/u.cm).to(u.m/u.m)).value).value
+# Spatial Grid
+x1 = np.arange(theta_N) * (theta_max - theta_min) / (theta_N - 1) + theta_min
 
-scale = p_scale.value
-sig_DM = 0.0006
-geom_const = ((1/(const_r1*c.c)).to(u.s)).value
-geom_const = geom_const * scale**2
-lens_const = kdm * sig_DM
-freq_power = -2.0
+# Lens functions
+seed = 4321
+lens_arr_r2 = RandomGaussianLens(theta_N, theta_N, 1, seed=seed)
+lens_arr_r1 = -1.0 * LogLens(x1[:, None], x1[None, :])
 
-print(f'Geom. const 1: {geom_const}')
-print(f'Lens. const 1: {lens_const}')
-print(f'Lens. param 800 MHz: {lens_const/geom_const/(freq_ref**2) }')
-print(f'Lens. param 400 MHz: {lens_const/geom_const/((freq_ref/2)**2) }')
+lens_arr_r2 = lens_arr_r2.astype(np.double).ravel(order="C")
+lens_arr_r1 = lens_arr_r1.astype(np.double).ravel(order="C")
+freqs = freqs.astype(np.double).ravel(order="C")
 
-#scale2 = np.sqrt(  (lens_const2/400e6**2) / ((1/(const_r1*c.c)).to(u.s)).value /0.001 )
-#kp2 = 0.002
-#print('Scale for R1:', np.sqrt(  (lens_const2/400e6**2) / ((1/(const_r1*c.c)).to(u.s)).value /kp2 ), (np.sqrt(  (lens_const2/400e6**2) / ((1/(const_r1*c.c)).to(u.s)).value /kp2 ) * D_obs_r1 ).to(u.AU)) 
-
-#kp1 = 96.0801906066323 #plasma
-#kp1 = 21 #plasma
-kp1 = 0.20003266123359079
-print('Scale:', np.sqrt(  (lens_const/400e6**2) / ((1/(const_r1*c.c)).to(u.s)).value /kp1 ), (np.sqrt(  (lens_const/400e6**2) / ((1/(const_r1*c.c)).to(u.s)).value /kp1 ) * D_obs_r1 ).to(u.AU)) 
-print('DM',sig_DM)
-x1 = np.arange(theta_N)* (theta_max - theta_min ) / (theta_N - 1) + theta_min
-
-seed = 1348
-rdmstate = np.random.RandomState(seed)
-lens_arr = rdmstate.normal(loc=0,scale=1,size=(theta_N,theta_N))
-
-lens_arr = lens_arr.astype(np.double).ravel(order='C')
-#lens_arr2 = lens_arr2.astype(np.double).ravel(order='C')
-
-freqs = freqs.astype(np.double).ravel(order='C')
-
-freqn = 1024*1 + 1
-freqmax = 800e6
-freqmin = 400e6
-freqss = [800e6,400e6]#800e6 - rfftfreq(2048,d=1/800e6)
-freq_ref = 800e6
-
-print('Getting the transfer function')
+# Get Images
+print("Getting the Images")
 t1 = time()
-txvals,tyvals,fvals,delayvals,magvals = rwl.GetUnitlessFreqStationaryPoints(
-                                       theta_min,
-                                       theta_max,
-                                       theta_N,
-                                       lens_arr,    
-                                       freqss,    
-                                       beta_x,
-                                       beta_y,
-                                       geom_const,
-                                       lens_const,
-                                       freq_power)
+txvals, tyvals, fvals, delayvals, magvals = rwl.GetMultiplaneFreqStationaryPoints(
+    theta_min,
+    theta_max,
+    theta_N,
+    freqs,
+    freq_ref,
+    lens_arr_r2,
+    scale_r2,
+    beta_r2_x,
+    beta_r2_y,
+    geom_const_r2,
+    lens_const_r2,
+    freq_power_r2,
+    lens_arr_r1,
+    scale_r1,
+    beta_r1_x,
+    beta_r1_y,
+    geom_const_r1,
+    lens_const_r1,
+    freq_power_r1,
+)
 tv = time() - t1
-print('Total Time :',tv,'s',' | ',tv/60,'min',tv/3600,'hr')
+print("Total Time :", tv, "s", " | ", tv / 60, "min", tv / 3600, "hr")
 
 txvals = np.asarray(txvals)
 tyvals = np.asarray(tyvals)
@@ -127,3 +147,218 @@ fvals = np.asarray(fvals)
 delayvals = np.asarray(delayvals)
 magvals = np.asarray(magvals)
 
+"""
+##########################
+#### Animate Spatial #####
+##########################
+"""
+# Spatial Animation setup
+num_frames = freqs.size
+
+# Setup plot
+fig = plt.figure()
+ax = fig.add_subplot(111)
+axsc = ax.scatter([], [], s=4)
+axisscale = 1e-6
+axisstr = "milli"
+framescale = 1e6
+framestr = "M"
+scaling = scale_r1 * 206264.806247 / axisscale
+
+
+# Select largest spatial extent
+cut1 = fvals == np.amin(fvals)  # lowest freq for scattering
+maxv_ = (
+    max(np.amax(np.abs(txvals[cut1])), np.amax(np.abs(tyvals[cut1]))) * scaling * 1.1
+)
+
+# Set axes and plot
+ax.set_ylim(-maxv_, maxv_)
+ax.set_xlim(-maxv_, maxv_)
+ax.set_ylabel(f"$\\theta_Y$ [{axisstr}arcsec]", size=14)
+ax.set_xlabel(f"$\\theta_X$ [{axisstr}arcsec]", size=14)
+ax.set_facecolor("black")
+cmap = cmaps.gray
+norm = LogNorm(vmin=1e-3, vmax=1)
+axsc.set_cmap(cmap)
+axsc.set_norm(norm)
+cb = fig.colorbar(cmaps.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
+cb.ax.set_title("Img. Mag.", y=1.02)
+
+
+# frame animation
+def update(i):
+    tcutt = fvals == freqs[i]
+    data = np.stack([txvals[tcutt] * scaling, tyvals[tcutt] * scaling]).T
+    axsc.set_offsets(data)
+    axsc.set_array(np.abs(magvals[tcutt]))
+    ax.set_title(f"Freq: {freqs[i]/framescale:.0f}  [{framestr}Hz]", size=14)
+    return (axsc,)
+
+
+# image framing
+image_duration = 2  # seconds
+frame_interval = 30e-3  # seconds between frames
+total_aniframes = image_duration / frame_interval
+stepsize = np.ceil(freqs.size / total_aniframes).astype(int)
+
+if stepsize == 0:
+    stepsize = 1
+
+frame_numbers = np.arange(0, freqs.size, step=stepsize)
+
+ani = matplotlib.animation.FuncAnimation(
+    fig, update, frames=frame_numbers, interval=30, blit=True
+)
+
+# save
+save_path = Path.cwd()
+save_path = save_path / "multilens_spatial_freqslice.gif"
+ani.save(filename=str(save_path), writer="pillow")
+
+
+"""
+###########################
+#### Animate Temporal #####
+###########################
+"""
+# setup time
+total_frames = 100
+left_edge = -total_frames // 4
+right_edge = total_frames + left_edge
+time_res = 2.56e-6  # s
+trange = np.arange(-1, total_frames + 2) * time_res + left_edge * time_res
+
+# setup figure
+fig = plt.figure()
+ax = fig.add_subplot(111)
+axsc = ax.scatter([], [], s=4)
+time_axis_scale = 1e-3
+time_axis_str = "m"
+freq_axis_scale = 1e6
+freq_axis_str = "M"
+ax.set_ylim(400, 800)
+ax.set_xlim(
+    left_edge * time_res / time_axis_scale, right_edge * time_res / time_axis_scale
+)
+ax.set_ylabel(f"Freq. [{freq_axis_str}Hz]")
+ax.set_xlabel(f"Time [{time_axis_str}s]")
+cmap = cmaps.binary
+norm = LogNorm(vmin=1e-3, vmax=1)
+axsc.set_cmap(cmap)
+axsc.set_norm(norm)
+cb = fig.colorbar(cmaps.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
+cb.ax.set_title("Img. Mag.")
+
+# image framing
+image_duration = 2  # seconds
+frame_interval = 30e-3  # seconds between frames
+total_aniframes = image_duration / frame_interval
+stepsize = np.ceil((trange.size - 1) / total_aniframes).astype(int)
+
+if stepsize == 0:
+    stepsize = 1
+
+trange_inds = np.arange(0, trange.size - 1, step=stepsize)
+
+
+# animate frame
+def update(i):
+    tcutt = (delayvals > trange[trange_inds[i]]) * (
+        delayvals <= trange[trange_inds[i + 1]]
+    )
+    data = np.stack(
+        [delayvals[tcutt] / time_axis_scale, fvals[tcutt] / freq_axis_scale]
+    ).T
+    axsc.set_offsets(data)
+    axsc.set_array(np.abs(magvals[tcutt]))
+    return (axsc,)
+
+
+# animate
+ani = matplotlib.animation.FuncAnimation(
+    fig, update, frames=trange_inds.size - 1, interval=30, blit=True
+)
+
+# save
+save_path = Path.cwd()
+save_path = save_path / "multilens_baseband_arrival.gif"
+ani.save(filename=str(save_path), writer="pillow")
+
+
+"""
+#######################################
+#### Animate Temporal and Spatial #####
+#######################################
+"""
+# setup time
+total_frames = 100
+left_edge = -total_frames // 4
+right_edge = total_frames + left_edge
+time_res = 2.56e-6  # s
+trange = np.arange(-1, total_frames + 2) * time_res + left_edge * time_res
+fmin = np.amin(fvals)
+
+# Setup plot
+fig = plt.figure()
+ax = fig.add_subplot(111)
+axsc = ax.scatter([], [], s=4)
+axisscale = 1e-6
+axisstr = "milli"
+framescale = 1e6
+framestr = "M"
+scaling = scale_r1 * 206264.806247 / axisscale
+
+# Select largest spatial extent
+cut1 = fvals == np.amin(fmin)  # lowest freq for scattering
+maxv_ = (
+    max(np.amax(np.abs(txvals[cut1])), np.amax(np.abs(tyvals[cut1]))) * scaling * 1.1
+)
+
+# Set axes and plot
+ax.set_ylim(-maxv_, maxv_)
+ax.set_xlim(-maxv_, maxv_)
+ax.set_ylabel(f"$\\theta_Y$ [{axisstr}arcsec]", size=14)
+ax.set_xlabel(f"$\\theta_X$ [{axisstr}arcsec]", size=14)
+ax.set_facecolor("black")
+cmap = cmaps.gray
+norm = LogNorm(vmin=1e-3, vmax=1)
+axsc.set_cmap(cmap)
+axsc.set_norm(norm)
+cb = fig.colorbar(cmaps.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
+cb.ax.set_title("Img. Mag.", y=1.02)
+
+# image framing
+image_duration = 2  # seconds
+frame_interval = 30e-3  # seconds between frames
+total_aniframes = image_duration / frame_interval
+stepsize = np.ceil((trange.size - 1) / total_aniframes).astype(int)
+
+if stepsize == 0:
+    stepsize = 1
+
+trange_inds = np.arange(0, trange.size - 1, step=stepsize)
+
+
+# frame animation
+def update(i):
+    tcutt = (delayvals[cut1] > trange[trange_inds[i]]) * (
+        delayvals[cut1] <= trange[trange_inds[i + 1]]
+    )
+
+    data = np.stack([txvals[cut1][tcutt] * scaling, tyvals[cut1][tcutt] * scaling]).T
+    axsc.set_offsets(data)
+    axsc.set_array(np.abs(magvals[cut1][tcutt]))
+    ax.set_title(f"Freq: {fmin/framescale:.0f} [{framestr}Hz] ", size=14)
+    return (axsc,)
+
+
+# animate
+ani = matplotlib.animation.FuncAnimation(
+    fig, update, frames=trange_inds.size - 1, interval=30, blit=True
+)
+
+# save
+save_path = Path.cwd()
+save_path = save_path / "multilens_baseband_spatial_arrival.gif"
+ani.save(filename=str(save_path), writer="pillow")

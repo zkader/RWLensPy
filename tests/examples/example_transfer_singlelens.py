@@ -6,7 +6,7 @@ import numpy as np
 from astropy import constants as c
 from astropy import cosmology
 from astropy import units as u
-from scipy.fft import rfftfreq, rfft, irfft
+from scipy.fft import irfft, rfft, rfftfreq
 
 import rwlenspy.lensing as rwl
 from rwlenspy.utils import RandomGaussianLens
@@ -70,6 +70,11 @@ freq_ref = 800e6
 bb_frames = 500
 freqs = 800e6 - rfftfreq(2048 * bb_frames, d=1 / (800e6))  # MHz
 freqs = freqs.astype(np.double).ravel(order="C")
+
+"""
+scipy rfft convention is sum G(t) e^{-i 2 pi f t }
+and irfft is sum G(f) e^{i 2 pi f t } / 2 pi.
+"""
 nyqalias = True
 
 # Spatial Grid
@@ -80,6 +85,7 @@ seed = 1234
 lens_arr = RandomGaussianLens(theta_N, theta_N, 1, seed=seed)
 lens_arr = lens_arr.astype(np.double).ravel(order="C")
 
+# Get Transfer Function
 print("Getting the transfer function with Algorithm...")
 t1 = time()
 transferfunc = rwl.RunUnitlessTransferFunc(
@@ -100,6 +106,11 @@ tv = time() - t1
 print("Tranfer function obtained in:", tv, "s", " | ", tv / 60, "min", tv / 3600, "hr")
 transferfunc = np.array(transferfunc).astype(np.cdouble)
 
+# Save numpy file
+save_path = Path.cwd()
+save_path = save_path / "singlelens_tranferfunc.npy"
+np.save(str(save_path), transferfunc)
+
 
 """
 ##############################
@@ -109,31 +120,45 @@ transferfunc = np.array(transferfunc).astype(np.cdouble)
 tres = 1.25e-9  # s
 times = np.arange(2048 * bb_frames) * tres
 sig_ = np.random.normal(loc=0, scale=1, size=times.size) * np.sqrt(
-    9
+    100
     * np.exp(
-        -0.5
-        * (times - 2048 * bb_frames // 4) ** 2
-        / (2 * (2048 * bb_frames // 12) ** 2)
+        -0.5 * (times - (2048 * bb_frames // 4) * tres) ** 2 / ((2048 * 8 * tres) ** 2)
     )
 )
 
 sig_ = irfft(rfft(sig_) * transferfunc)
-noise_ = np.random.normal(loc=0, scale=1, size=sig_.size)
+
+noise_ = np.random.normal(loc=0, scale=1, size=sig_.size) * 0
 
 vstream_ = sig_ + noise_
 
-baseband_ = vstream_.reshape((vstream_ // 2048, 2048))
+# plot figure
+plt.figure()
+plt.plot(times / 1e-3, vstream_)
+plt.ylabel("Voltage [V]", size=14)
+plt.xlabel("Time [ms]", size=14)
+
+# save png
+save_path = Path.cwd()
+save_path = save_path / "singlelens_voltstream.png"
+plt.savefig(str(save_path))
+
+# FFT the voltage
+baseband_ = vstream_.reshape((vstream_.size // 2048, 2048))
 baseband_ = rfft(baseband_, axis=-1).T
 
+# plot figure
 plt.figure()
 plt.imshow(
     np.abs(baseband_) ** 2,
     aspect="auto",
-    extent=[freqs.amin(), freqs.amax(), 0, times[-1] / 1e-3],
+    extent=[0, times[-1] / 1e-3, freqs.min() / 1e6, freqs.max() / 1e6],
 )
 plt.ylabel("Freq [MHz]", size=14)
 plt.xlabel("Time [ms]", size=14)
+plt.colorbar()
 
+# save png
 save_path = Path.cwd()
 save_path = save_path / "singlelens_baseband.png"
 plt.savefig(str(save_path))
