@@ -1,0 +1,10 @@
+.vscode/PythonImportHelper-v2-Completion.json
+.vscode/settings.json
+build/*
+dist/*
+__pycache__/*
+rwlenspy/__pycache__/*
+tests/__pycache__/*
+tests/examples/__pycache__/*
+rwlenspy/lensing.cpp
+rwlenspy/lensing.cpython*

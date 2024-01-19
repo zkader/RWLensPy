@@ -1,5 +1,14 @@
-import os
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import numpy
+from setuptools.command.build_ext import build_ext
+from setuptools import Extension
+
+from pathlib import Path
+
+root = Path(__file__).parent
+
+print("Build File Imported")
 
 # See if Cython is installed
 try:
@@ -8,34 +17,32 @@ try:
 except ImportError:
     # Got to provide this function. Otherwise, poetry will fail
     def build(setup_kwargs):
-        pass
-# Cython is installed. Compile
+        print("Build without Cython")
+# Cython is installed, Compile.
 else:
-    from setuptools import Extension
-    from setuptools.dist import Distribution
-    from distutils.command.build_ext import build_ext
-
     # This function will be executed in setup.py:
     def build(setup_kwargs):
+        print("Build with Cython")
         # The files you want to compile
         ext_modules = [
             Extension(
-            "rwlenspy.lensing",
-            ["rwlenspy/lensing.pyx"],
-            include_dirs = ['rwlenspy/.'],
-            extra_compile_args=['-fopenmp','-std=c++11'],
-            extra_link_args=['-fopenmp'],)
+                "rwlenspy.lensing",
+                ["rwlenspy/lensing.pyx"],
+                include_dirs=["rwlenspy/."],
+                extra_compile_args=["-fopenmp", "-std=c++11"],
+                extra_link_args=["-fopenmp"],
+            )
         ]
-        
+
         # Build
-        setup_kwargs.update({
-            'ext_modules': cythonize(
-                ext_modules,
-                language_level=3,
-                compiler_directives={'linetrace': True},
-            ),
-            'cmdclass': {'build_ext': build_ext}
-            ,
-            'include_dirs': [numpy.get_include()]
-        }
+        setup_kwargs.update(
+            {
+                "ext_modules": cythonize(
+                    ext_modules,
+                    language_level=3,
+                    compiler_directives={"linetrace": True},
+                ),
+                "cmdclass": {"build_ext": build_ext},
+                "include_dirs": [numpy.get_include()],
+            }
         )
