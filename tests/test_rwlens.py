@@ -381,11 +381,11 @@ def test_dedisperion():
     transferfunc = np.array(transferfunc).astype(np.cdouble)
 
     # Analytic dispersion for alias sampled freq
-    dispersion_tf = np.exp(
+    dedispersion_tf = np.exp(
         2j * np.pi * freqs * kdm * DM * (1 / freqs**2 - 1 / 800e6**2)
     )
 
     # dedispersion removes the phase
-    assert (np.abs(np.angle(transferfunc * dispersion_tf.conj())) < 1e-10).all()
+    assert (np.abs(np.angle(transferfunc * dedispersion_tf)) < 1e-10).all()
 
     return

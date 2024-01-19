@@ -580,8 +580,8 @@ double GetLensDelay(
     double lens_delay = 0;    
     if(freq_power != 0.0)
     {
-        lens_delay = lens_fac * ( pow( freq, freq_power)
-                            -  pow( freq_ref,freq_power) )\
+        lens_delay = lens_fac * ( pow( freq_ref, freq_power)
+                            -  pow( freq, freq_power) )\
                             * lens_arr_val ;        
     }else
     {
