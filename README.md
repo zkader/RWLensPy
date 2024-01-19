@@ -10,6 +10,12 @@ The code can be installed with:
 
 For examples see `tests/examples/`. The image ray trace is shown in the `example_animate_*.py` files and how to get the coherent transfer function for a baseband simulation is shown in `example_transfer*.py`.
 
+![TEXT?](./tests/examples/plots/multilens_spatial_freqslice.gif)
+
+![More TEXT?](./tests/examples/plots/singelens_spatial_freqslice.gif)
+
+![Even More TEXT?](./tests/examples/plots/singlelens_baseband_spatial_arrival.gif)
+
 ## Custom/Dev Install
 
 The package is built with Poetry and Cython using C++11 and OpenMP. This requires having a compiler like `gcc` if one is editing the code. If one requires a dev install, this can be done with:
