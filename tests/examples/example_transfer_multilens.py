@@ -1,20 +1,16 @@
 from pathlib import Path
 from time import time
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy import constants as c
 from astropy import cosmology
 from astropy import units as u
+from matplotlib.colors import LogNorm
 from scipy.fft import irfft, rfft, rfftfreq
 
 import rwlenspy.lensing as rwl
 from rwlenspy.utils import LogLens, RandomGaussianLens
-
-# Matplotlib setup
-GREYMAP = mpl.cm.__dict__["Greys"]
-plt.rcParams["savefig.dpi"] = 70
 
 """
 ############################
@@ -128,7 +124,7 @@ transferfunc = rwl.RunMultiplaneTransferFunc(
     geom_const_r1,
     lens_const_r1,
     freq_power_r1,
-    nyqalias
+    nyqalias,
 )
 tv = time() - t1
 print("Total Time :", tv, "s", " | ", tv / 60, "min", tv / 3600, "hr")
@@ -148,45 +144,54 @@ np.save(str(save_path), transferfunc)
 tres = 1.25e-9  # s
 times = np.arange(2048 * bb_frames) * tres
 sig_ = np.random.normal(loc=0, scale=1, size=times.size) * np.sqrt(
-    100
+    30
     * np.exp(
-        -0.5 * (times - (2048 * bb_frames // 4) * tres) ** 2 / ((2048 * 8 * tres) ** 2)
+        -0.5 * (times - (2048 * bb_frames // 4) * tres) ** 2 / ((2048 * 4 * tres) ** 2)
     )
 )
 
 sig_ = irfft(rfft(sig_) * transferfunc)
 
-noise_ = np.random.normal(loc=0, scale=1, size=sig_.size) * 0
+noise_ = np.random.normal(loc=0, scale=1, size=sig_.size)
 
 vstream_ = sig_ + noise_
 
 # plot figure
-plt.figure()
-plt.plot(times / 1e-3, vstream_)
-plt.ylabel("Voltage [V]", size=14)
-plt.xlabel("Time [ms]", size=14)
+fig, ax = plt.subplots()
+ax.plot(times / 1e-3, vstream_)
+ax.set_ylabel("Voltage [V]", size=14)
+ax.set_xlabel("Time [ms]", size=14)
 
 # save png
 save_path = Path.cwd()
 save_path = save_path / "multilens_voltstream.png"
-plt.savefig(str(save_path))
+fig.savefig(str(save_path))
 
 # FFT the voltage
-baseband_ = vstream_.reshape((vstream_.size // 2048, 2048))
-baseband_ = rfft(baseband_, axis=-1).T
+vstream_ = vstream_.reshape((vstream_.shape[-1] // 2048, 2048))
+baseband_ = rfft(vstream_, axis=-1).T
 
-# plot figure
-plt.figure()
-plt.imshow(
+# Simple masking of caustic frequencies
+mask = np.mean(np.abs(baseband_) ** 2, axis=-1)
+mask = mask / np.median(mask)
+mask_mean = np.median(mask)
+mask_std = 1.4826 * np.median(np.abs(mask - mask_mean))
+mask = mask > 8
+baseband_[mask, :] = 0 + 0j
+
+# plot baseband
+fig, ax = plt.subplots()
+im1 = ax.imshow(
     np.abs(baseband_) ** 2,
     aspect="auto",
-    extent=[0, times[-1] / 1e-3, freqs.min() / 1e6, freqs.max() / 1e6],
+    norm=LogNorm(),
+    extent=[0, vstream_.shape[-1] // 2048 * 2.56e-6 / 1e-3, 400, 800],
 )
-plt.ylabel("Freq [MHz]", size=14)
-plt.xlabel("Time [ms]", size=14)
-plt.colorbar()
+ax.set_ylabel("Freq [MHz]", size=14)
+ax.set_xlabel("Time [ms]", size=14)
+fig.colorbar(im1)
 
 # save png
 save_path = Path.cwd()
 save_path = save_path / "multilens_baseband.png"
-plt.savefig(str(save_path))
+fig.savefig(str(save_path))
