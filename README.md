@@ -17,6 +17,7 @@ For examples see `tests/examples/`. The image ray trace is shown in the `example
 The package is built with Poetry and Cython using C++11 and OpenMP. This requires having a compiler like `gcc` if one is editing the code. If one requires a dev install, this can be done with:
 
 `poetry install --with test,dev`
+
 `poetry run python`
 
 Once installed, tests can be run with:
