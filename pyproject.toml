@@ -6,6 +6,7 @@ authors = ["Zarif Kader <kader.zarif@gmail.com>"]
 readme = "README.md"
 include = [
     { path = "tests", format = "sdist" },
+    { path = "examples/*.py", format = "sdist" }
 ]
 
 
