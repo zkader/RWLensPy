@@ -90,7 +90,7 @@ x1 = np.arange(theta_N) * (theta_max - theta_min) / (theta_N - 1) + theta_min
 
 # Lens Functions
 seed = 1234
-lens_arr = RandomGaussianLens(theta_N, theta_N, 1, seed=seed)
+lens_arr = np.ones((theta_N, theta_N)) * RandomGaussianLens(1, theta_N, 1, seed=seed)
 lens_arr = lens_arr.astype(np.double).ravel(order="C")
 
 # Solutions from Algorithm
