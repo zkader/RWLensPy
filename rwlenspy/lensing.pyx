@@ -380,7 +380,8 @@ cpdef GetUnitlessFreqStationaryPoints( double theta_min,
                                        double beta_y,
                                        double geom_const,
                                        double lens_const,
-                                       double freq_power
+                                       double freq_power,
+                                       size_t max_membytes
                                        ):
     """Get all observables after propagation through a lens.
 
@@ -414,7 +415,7 @@ cpdef GetUnitlessFreqStationaryPoints( double theta_min,
     cdef vector[vector[imagepoint]] freqpnts = vector[vector[imagepoint]](freq_N)
     cdef vector[physpoint] grad_lens_arr = vector[physpoint](theta_N*theta_N)
     cdef vector[physpoint] hess_lens_arr = vector[physpoint](theta_N*theta_N)
-	
+
     cdef physpoint beta_vec
     
     beta_vec.valx = beta_x
@@ -444,10 +445,14 @@ cpdef GetUnitlessFreqStationaryPoints( double theta_min,
                          hess_lens_arr,	geom_const, lens_const, beta_vec, freqpnts[freq_ii])
 
             vsize = sizeof(imagepoint) * freqpnts[freq_ii].capacity() + sizeof(freqpnts[freq_ii])
-            report_withsize(freq_mod,freq_N,vsize)
-            
+            report_withsize(freq_mod,freq_N,vsize,max_membytes)            
+            if vsize > max_membytes:
+                break
     destroy() # release lock
-   
+    
+    if vsize > max_membytes:
+        raise RuntimeError(f'Out of Memory Allocated: {vsize} / {max_membytes}')
+
     cdef vector[double] thetaxs_,thetays_,freqs_
     cdef vector[complex] magarr
     cdef vector[double] delayarr
@@ -474,7 +479,8 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
                                        double beta_2_y,
                                        double geom_const_2,
                                        double lens_const_2,
-                                       double freq_power_2 
+                                       double freq_power_2,
+                                       size_t max_membytes
                                      ):
     """Get all observables after two lens propagation (any + any).
 
@@ -565,9 +571,14 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
                                    geom_const_2, lens_const_2, beta_2_vec, freqpnts[freq_ii])  
             
             vsize = sizeof(imagepoint) * freqpnts[freq_ii].capacity() + sizeof(freqpnts[freq_ii])  
-            report_withsize(freq_mod,freq_N,vsize)
+            report_withsize(freq_mod,freq_N,vsize,max_membytes)
+            if vsize > max_membytes:
+                break
     destroy() # release lock
                
+    if vsize > max_membytes:
+        raise RuntimeError(f'Out of Memory Allocated: {vsize} / {max_membytes}')
+
     cdef vector[double] thetaxs_,thetays_,freqs_
     cdef vector[complex] magarr
     cdef vector[double] delayarr
@@ -592,7 +603,8 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
                                        double mass,
                                        double lens_scale_2,
                                        double beta_2_x,
-                                       double beta_2_y
+                                       double beta_2_y,
+                                       size_t max_membytes
                                      ):
     """Get all observables after two lens propagation (any + grav).
 
@@ -682,9 +694,14 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
                                       freqpnts[freq_ii])
 
             vsize = sizeof(imagepoint) * freqpnts[freq_ii].capacity() + sizeof(freqpnts[freq_ii])
-            report_withsize(freq_mod,freq_N,vsize)
+            report_withsize(freq_mod,freq_N,vsize,max_membytes)
+            if vsize > max_membytes:
+                break
     destroy() # release lock
    
+    if vsize > max_membytes:
+        raise RuntimeError(f'Out of Memory Allocated: {vsize} / {max_membytes}')
+
     cdef vector[double] thetaxs_,thetays_,freqs_
     cdef vector[complex] magarr
     cdef vector[double] delayarr
