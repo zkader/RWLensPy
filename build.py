@@ -13,11 +13,22 @@ print("Build File Imported")
 # See if Cython is installed
 try:
     from Cython.Build import cythonize
-# Do nothing if Cython is not available
+# If Cython is not available
 except ImportError:
-    # Got to provide this function. Otherwise, poetry will fail
     def build(setup_kwargs):
         print("Build without Cython")
+        ext_modules = [
+            Extension(
+                "rwlenspy.lensing",
+                ["rwlenspy/lensing.cpp"],
+            )
+        ]
+        setup_kwargs.update(
+            {
+                "ext_modules": ext_modules,
+                "include_dirs": [numpy.get_include()],
+            }
+        )
 # Cython is installed, Compile.
 else:
     # This function will be executed in setup.py:
@@ -27,10 +38,12 @@ else:
         ext_modules = [
             Extension(
                 "rwlenspy.lensing",
-                ["rwlenspy/lensing.pyx"],
-                include_dirs=["rwlenspy/."],
+                sources=["rwlenspy/lensing.pyx", "rwlenspy/rwlens.cpp"],
+                include_dirs=[numpy.get_include()],
                 extra_compile_args=["-fopenmp", "-std=c++11"],
                 extra_link_args=["-fopenmp"],
+                define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
+                language="c++"
             )
         ]
 
@@ -43,6 +56,5 @@ else:
                     compiler_directives={"linetrace": True},
                 ),
                 "cmdclass": {"build_ext": build_ext},
-                "include_dirs": [numpy.get_include()],
             }
         )

@@ -1,9 +1,14 @@
 [tool.poetry]
 name = "rwlenspy"
-version = "0.1.0"
+version = "1.0.1a2"
 description = "Lensing simulation from Fermat Potenials"
 authors = ["Zarif Kader <kader.zarif@gmail.com>"]
 readme = "README.md"
+include = [
+    { path = "tests", format = "sdist" },
+    { path = "examples/*.py", format = "sdist" }
+]
+
 
 [tool.poetry.build]
 script = "build.py"

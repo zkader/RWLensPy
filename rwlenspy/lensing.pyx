@@ -1,6 +1,3 @@
-# distutils: language = c++
-# distutils: sources = rwlenspy/rwlens.cpp
-
 import numpy as np
 cimport numpy as np
 cimport cython

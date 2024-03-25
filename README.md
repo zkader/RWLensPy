@@ -8,9 +8,9 @@ The code can be installed with:
 
 ## Examples
 
-For examples see `tests/examples/`. The image ray trace is shown in the `example_animate_*.py` files and how to get the coherent transfer function for a baseband simulation is shown in `example_transfer*.py`.
+For examples see `examples/`. The image ray trace is shown in the `example_animate_*.py` files and how to get the coherent transfer function for a baseband simulation is shown in `example_transfer*.py`.
 
-<img src="./tests/examples/plots/singelens_spatial_freqslice.gif" width=42%>    <img src="./tests/examples/plots/singlelens_baseband_spatial_arrival.gif" width=42%>
+<img src="./examples/plots/singelens_spatial_freqslice.gif" width=42%>    <img src="./examples/plots/singlelens_baseband_spatial_arrival.gif" width=42%>
 
 ## Custom/Dev Install
 
