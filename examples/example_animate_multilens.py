@@ -42,6 +42,9 @@ Diagram of Lensing System setup.
 # obs            r1             r2              src
 ############################################################
 """
+# Memory in bytes
+max_memory = 4e9
+
 cosmo = cosmology.Planck18
 
 # Comoving
@@ -137,6 +140,7 @@ txvals, tyvals, fvals, delayvals, magvals = rwl.GetMultiplaneFreqStationaryPoint
     geom_const_r1,
     lens_const_r1,
     freq_power_r1,
+    max_memory
 )
 tv = time() - t1
 print("Total Time :", tv, "s", " | ", tv / 60, "min", tv / 3600, "hr")

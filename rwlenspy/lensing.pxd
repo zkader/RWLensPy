@@ -41,7 +41,7 @@ cdef extern from * nogil:
         omp_unset_lock(&cnt_lock);
     }
     
-    void report_withsize(int mod, int totalcnts,size_t v_size){
+    void report_withsize(int mod, int totalcnts,size_t v_size, size_t maxmem){
         omp_set_lock(&cnt_lock);
         // start protected code:
         cnt++;
@@ -52,7 +52,7 @@ cdef extern from * nogil:
             double check_time = omp_get_wtime() - start_time;
             std::cout << "Progress : " << progress*100.0 << " % ";
             std::cout << "| Time Elapsed : " << check_time << " s ";
-            std::cout << "| Memory Used : "<< total_bytes << " Bytes" << std::endl;
+            std::cout << "| Memory Used : "<< 100.0 * (double)total_bytes / (double) maxmem << " %" << std::endl;            
         }
         // end protected code block
         omp_unset_lock(&cnt_lock);
@@ -61,7 +61,7 @@ cdef extern from * nogil:
     void reset()
     void destroy()
     void report(int mod,int totalcnts)
-    void report_withsize(int mod, int totalcnts,size_t v_size)
+    void report_withsize(int mod, int totalcnts,size_t v_size, size_t maxmem)
 
 cdef extern from "rwlens.h":
     cdef struct imagepoint:
