@@ -744,10 +744,10 @@ void SetGradientArrs(
             physpoint magpnt;
 			
 			// first eigenvalue
-            magpnt.valx = fxx + fyy + pow( pow(fxx - fyy,2) - 4 * fxy* fxy ,0.5);
+            magpnt.valx = fxx + fyy + pow( pow(fxx - fyy,2) + 4 * fxy* fxy ,0.5);
 			
 			// second eigenvalue
-            magpnt.valy = fxx + fyy - pow( pow(fxx - fyy,2) - 4 * fxy* fxy ,0.5);
+            magpnt.valy = fxx + fyy - pow( pow(fxx - fyy,2) + 4 * fxy* fxy ,0.5);
 			
             ddlens_arr[arr_ind] = magpnt;                
         }
