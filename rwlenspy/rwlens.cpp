@@ -550,13 +550,13 @@ std::complex<double> GetMag(
 	physpoint maghessleft = mag_arr[(jtheta-1) + theta_N * itheta];
 	physpoint maghessright = mag_arr[(jtheta+1) + theta_N * itheta];
     	
-    // valy is det(lens) and valx is trace(lens)
-	// calculate the hessiant at all grid boundaries
-	magvalcntr = 1.0 + lens_param * lens_param * maghesscntr.valy + lens_param * maghesscntr.valx ; 
-	magvalup = 1.0 + lens_param * lens_param * maghessup.valy + lens_param * maghessup.valx ; 
-	magvaldown = 1.0 + lens_param * lens_param * maghessdown.valy + lens_param * maghessdown.valx ; 
-	magvalleft = 1.0 + lens_param * lens_param * maghessleft.valy + lens_param * maghessleft.valx ; 
-	magvalright = 1.0 + lens_param * lens_param * maghessright.valy + lens_param * maghessright.valx ; 
+    // valx is positive eigvalue and valy is negative eigvalue
+	// calculate the mag at all grid boundaries
+	magvalcntr = 0.25 * (2 + lens_param * maghesscntr.valx) * (2 + lens_param * maghesscntr.valy) ;
+	magvalup = 0.25 * (2 + lens_param * maghessup.valx) * (2 + lens_param * maghessup.valx);
+	magvaldown = 0.25 * (2 + lens_param * maghessdown.valx) * (2 + lens_param * maghessdown.valx) ;
+	magvalleft = 0.25 * (2 + lens_param * maghessleft.valx) * (2 + lens_param * maghessleft.valx) ;
+	magvalright = 0.25 * (2 + lens_param * maghessright.valx) * (2 + lens_param * maghessright.valx) ;
 
     // Check for 0 in the hessian i.e. a caustic point within the grid cell
     if( (StatCellCheck(fabs(magvalcntr),fabs(magvalleft)) || StatCellCheck(fabs(magvalcntr),fabs(magvalright))) 
@@ -691,7 +691,7 @@ void SetGradientArrs(
 	std::vector<physpoint> &dlens_arr ,
 	std::vector<physpoint> &ddlens_arr 	
 ){  
-    // Calculate the gradient and determinant of the hessian for a lens 
+    // Calculate the gradient and eigenvalues of the hessian for a lens 
 	assert ( lens_arr.size() == dlens_arr.size());
 	assert ( lens_arr.size() == theta_N*theta_N);
 	    
@@ -743,11 +743,11 @@ void SetGradientArrs(
             
             physpoint magpnt;
 			
-			// Trace of Hessian
-			magpnt.valx = fxx + fyy;
+			// first eigenvalue
+            magpnt.valx = fxx + fyy + pow( pow(fxx - fyy,2) - 4 * fxy* fxy ,0.5);
 			
-			// Determinant of Hessian
-			magpnt.valy = fxx*fyy - fxy*fxy;			
+			// second eigenvalue
+            magpnt.valy = fxx + fyy - pow( pow(fxx - fyy,2) - 4 * fxy* fxy ,0.5);
 			
             ddlens_arr[arr_ind] = magpnt;                
         }

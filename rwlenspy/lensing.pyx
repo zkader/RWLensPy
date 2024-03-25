@@ -711,8 +711,10 @@ cpdef GetLensGradArrs(vector[double] lens_arr,
     """Get the gradient, trace and determinant of the Hessian.
     
     This is a wrapper function for the C++ functions that gets the
-    gradient and Hessian of an array. It returns these arrays in a 
-    python compatible array.
+    gradient and lens component of the eigenvalue of the hessian.
+    The eigenvalue is 0.5 ( 2 + kappa * eig[1/2]_lens ) where
+    kappa is the lens strength. It returns these arrays in a 
+    python compatible format.
 
     Args:
         lens_arr (array[double]): The array of the lens function of shape (N*N,1)
@@ -723,22 +725,22 @@ cpdef GetLensGradArrs(vector[double] lens_arr,
     Returns:
         gradx_lens (array[double]) : The gradient in the X direction of the lens.
         grady_lens (array[double]) : The gradient in the Y direction of the lens.
-        TrHess_lens (array[double]) : The trace of the Hessian of the lens.
-        DetHess_lens (array[double]) : The determinant of the Hessian of the lens.
+        eig1_lens (array[double]) : The first eigenvalue component.
+        eig2_lens (array[double]) : The second eigenvalue component.
     """
     cdef vector[physpoint] grad_lens_arr = vector[physpoint](theta_N*theta_N)
-    cdef vector[physpoint] hess_lens_arr = vector[physpoint](theta_N*theta_N)		
+    cdef vector[physpoint] eigH_lens_arr = vector[physpoint](theta_N*theta_N)		
     cdef double theta_step = (theta_max - theta_min) /  (theta_N - 1)
 
-    SetGradientArrs( theta_N, theta_step, lens_arr, grad_lens_arr, hess_lens_arr)
+    SetGradientArrs( theta_N, theta_step, lens_arr, grad_lens_arr, eigH_lens_arr)
 
     cdef vector[double] gradx_lens, grady_lens 
-    cdef vector[double] TrHess_lens, DetHess_lens 
+    cdef vector[double] eig1_lens, eig2_lens 
     
     gradx_lens, grady_lens = ConvertPhyspointVec(grad_lens_arr)
-    TrHess_lens, DetHess_lens = ConvertPhyspointVec(hess_lens_arr)
+    eig1_lens, eig2_lens = ConvertPhyspointVec(eigH_lens_arr)
 
-    return gradx_lens, grady_lens, TrHess_lens, DetHess_lens
+    return gradx_lens, grady_lens, eig1_lens, eig2_lens
 
 # Data Conversion to python
 cpdef ConvertFreqStatPnts(vector[vector[imagepoint]] freqpnts):
