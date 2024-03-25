@@ -403,6 +403,7 @@ cpdef GetUnitlessFreqStationaryPoints( double theta_min,
         geom_const (double): The geometric parameter [s]
         lens_const (double): The lens parameter [s]
         freq_power (double): The power relation of the lens.
+        max_membytes (size_t) : The maximum memory allowed [bytes]
 
     Returns:
         thetaxs_ (array[double]): The X position of the images. [ul]
@@ -518,6 +519,7 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
         geom_const_2 (double): The geometric parameter on plane 2. [s]
         lens_const_2 (double): The lens parameter on plane 2. [s]
         freq_power_2 (double): The power relation of the lens on plane 2.
+        max_membytes (size_t) : The maximum memory allowed [bytes]
 
     Returns:
         thetaxs_ (array[double]): The X position of the images. [ul]
@@ -635,6 +637,7 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
                                 plane 2. [rad]
         beta_2_x (double): The X position of the source from plane 1. [ul]
         beta_2_y (double): The Y position of the source from plane 2. [ul]
+        max_membytes (size_t) : The maximum memory allowed [bytes]
 
     Returns:
         thetaxs_ (array[double]): The X position of the images. [ul]
