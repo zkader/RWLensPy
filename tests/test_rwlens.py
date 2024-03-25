@@ -21,6 +21,9 @@ def test_imageobservables():
     obs            r1             src
     ####################################
     """
+    # Memory in bytes
+    maxmemory = 2E9
+
     cosmo = cosmology.Planck18
     # Comoving
     D_obs_src = cosmo.comoving_distance(1)
@@ -78,6 +81,7 @@ def test_imageobservables():
         geom_const,
         lens_const,
         freq_power,
+        maxmemory
     )
     tv = time() - t1
     print("Images obtained in:", tv, "s", " | ", tv / 60, "min", tv / 3600, "hr")
