@@ -13,12 +13,14 @@ cdef extern from * nogil:
     static int cnt = 0;
     static double start_time = omp_get_wtime();
     static size_t total_bytes = 0;
+    static bool memcheck = false;    
     
     void reset(){
         omp_init_lock(&cnt_lock);
         cnt = 0;
         start_time = omp_get_wtime();
         total_bytes = 0;
+        memcheck = false;        
     }
     
     void destroy(){
@@ -46,6 +48,8 @@ cdef extern from * nogil:
         // start protected code:
         cnt++;
         total_bytes = total_bytes + v_size;
+
+        if(total_bytes > maxmem){memcheck = true;}
         
         if(cnt % mod == 0){
             double progress = (double)cnt / (double)totalcnts;    
@@ -56,12 +60,19 @@ cdef extern from * nogil:
         }
         // end protected code block
         omp_unset_lock(&cnt_lock);
+
+        //if(total_bytes > maxmem){
+        //    throw std::runtime_error("Maximum Memory Exceeded");
+        //}
     }
+
+    bool check_mem(){ return memcheck;}
     """
     void reset()
     void destroy()
     void report(int mod,int totalcnts)
     void report_withsize(int mod, int totalcnts,size_t v_size, size_t maxmem)
+    bint check_mem()
 
 cdef extern from "rwlens.h":
     cdef struct imagepoint:
