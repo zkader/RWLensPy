@@ -60,10 +60,6 @@ cdef extern from * nogil:
         }
         // end protected code block
         omp_unset_lock(&cnt_lock);
-
-        //if(total_bytes > maxmem){
-        //    throw std::runtime_error("Maximum Memory Exceeded");
-        //}
     }
 
     bool check_mem(){ return memcheck;}
