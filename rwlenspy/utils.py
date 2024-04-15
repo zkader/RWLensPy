@@ -138,6 +138,32 @@ def GaussianLens(
     return Lens_del
 
 
+def RationalLens(
+    rx: npt.ArrayLike, ry: npt.ArrayLike, scale: float = 1, amp: float = 1
+) -> npt.ArrayLike:
+    """
+    Get a Rational lens.
+
+    Parameters
+    ----------
+    rx : ArrayLike
+        ArrayLike of X positions on the lens plane.
+    ry : ArrayLike
+        ArrayLike of Y positions on the lens plane.
+    scale : float, optional
+        The width of the lens, by default 1
+    amp : float, optional
+        The amplitude of the lens, by default 1
+
+    Returns
+    -------
+    ArrayLike
+        The value of the lensing function.
+    """
+    Lens_del = amp / (1 + 0.5*((rx) ** 2 + (ry) ** 2) / (scale**2))
+    return Lens_del
+
+
 def MultiGaussianLens(
     rx: npt.ArrayLike,
     ry: npt.ArrayLike,
@@ -147,9 +173,7 @@ def MultiGaussianLens(
     posy: np.ndarray = np.array([0]),
 ) -> npt.ArrayLike:
     """
-    _summary_
-
-    _extended_summary_
+    Get a lens consisting of multiple Gaussian lenses.
 
     Parameters
     ----------
@@ -437,3 +461,97 @@ def AnalyticGaussPlasma(
         i_magvv = np.append(i_magvv, _lensmag(xvv[idx], mu_))
 
     return freqvv, xposvv, i_delvv, i_magvv
+
+
+def AnalyticRationalLens(
+    y: float,
+    geom_par: float,
+    lens_par: float,
+    freqvals: npt.ArrayLike
+) -> T.Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Get the observables for a rational plasma lens.
+
+    Get the observables for a rational plasma lens using the
+    analytic solutions. The image solutions do not always have an
+    analytic solution so the solutions are found by numerical root
+    finding. Note this is solved along the axis of the source and
+    the origin of the lens plane, assuming the lens is radially
+    symmetric.
+
+    Parameters
+    ----------
+    y : float
+        Source position on the lens plane.
+    geom_par : float
+        The geometric parameter of the Fermat potential.
+    lens_par : float
+        The lensing parameter of the Fermat potential.
+    freqvals : ArrayLike
+        Array of frequency values to search for images.
+
+    Returns
+    -------
+    freqvv : ndarray
+        Array of the frequencies for the image.
+    xposvv : ndarray
+        Array of the image positions on the lens plane.
+    i_delvv : ndarray
+        Array of the image delays.
+    i_magvv : ndarray
+        Array of the image magnifications.
+    """
+    # stationary point func
+    def _lenspos(y, kappa, sigma):
+        coeffs = [1 / (4 * sigma ** 4),
+                  -y / (4 * sigma ** 4),
+                  1 / (sigma ** 2),
+                  -y / (sigma ** 2),
+                  1 - kappa/sigma ** 2,
+                  -y]
+
+        images = np.roots(coeffs)
+        real_imgs = np.array([])
+        for im_ in images:
+            if np.imag(im_) == 0:
+                xci = np.real(im_)
+                real_imgs = np.append(real_imgs, xci)
+
+        return real_imgs
+
+    # lens delay func
+    def _lensdel(x, y, geom_const, lens_const, sigma):
+        return (geom_const * 0.5 * (x - y) ** 2 +
+                lens_const * 1 / (1 + 0.5 * x ** 2 / sigma ** 2))
+
+    # lens mag func
+    def _lensmag(x, kappa, sigma):
+        x_a = x*x / sigma**2
+        pre_fac = kappa / sigma ** 2 / (1 + 0.5 * x_a)**3
+
+        eig1 = 1 + pre_fac * (5/2 * x_a - 1) + 0j
+        eig2 = 1 + pre_fac * (1/2 * x_a - 1) + 0j
+
+        return 1/np.sqrt(eig1 * eig2)
+
+    imgfreqs = []
+    imgdels = []
+    imgmags = []
+    imgxs = []
+
+    for f_ in freqvals:
+        kap_ = lens_par / geom_par / f_ ** 2
+
+        imgs = _lenspos(y, kap_, 1)
+        for im_ in imgs:
+            imgfreqs.append(f_)
+            imgxs.append(im_)
+            imgdels.append(_lensdel(im_, y, geom_par, lens_par / f_ ** 2, 1))
+            imgmags.append(_lensmag(im_, kap_, 1))
+
+    imgfreqs = np.array(imgfreqs)
+    imgdels = np.array(imgdels)
+    imgmags = np.array(imgmags)
+    imgxs = np.array(imgxs)
+
+    return imgfreqs, imgxs, imgdels, imgmags
