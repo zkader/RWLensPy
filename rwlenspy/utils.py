@@ -527,10 +527,10 @@ def AnalyticRationalLens(
     # lens mag func
     def _lensmag(x, kappa, sigma):
         x_a = x*x / sigma**2
-        pre_fac = kappa / sigma ** 2 / (1 + 0.5 * x_a)**3
+        pre_fac = (1 + 0.5 * x_a)
 
-        eig1 = 1 + pre_fac * (5/2 * x_a - 1) + 0j
-        eig2 = 1 + pre_fac * (1/2 * x_a - 1) + 0j
+        eig1 = 1 + kappa / pre_fac**3 * (3/2 * x*x - 1) + 0j
+        eig2 = 1 - kappa / pre_fac**2 + 0j
 
         return 1/np.sqrt(eig1 * eig2)
 
