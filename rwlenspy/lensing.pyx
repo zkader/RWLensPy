@@ -440,6 +440,9 @@ cpdef GetUnitlessFreqStationaryPoints( double theta_min,
     reset() # reset counter,time,memory and init lock            
     with nogil, parallel():
         for freq_ii in prange(freq_N):
+            if check_mem():
+                break
+                
             freq_val = freq_arr[freq_ii]
 
             GetFreqImage(theta_step, theta_N, theta_min, freq_val, freq_power, lens_arr, grad_lens_arr,\
@@ -447,12 +450,10 @@ cpdef GetUnitlessFreqStationaryPoints( double theta_min,
 
             vsize = sizeof(imagepoint) * freqpnts[freq_ii].capacity() + sizeof(freqpnts[freq_ii])
             report_withsize(freq_mod,freq_N,vsize,max_membytes)            
-            if vsize > max_membytes:
-                break
     destroy() # release lock
-    
-    if vsize > max_membytes:
-        raise RuntimeError(f'Out of Memory Allocated: {vsize} / {max_membytes}')
+
+    if check_mem():
+        raise RuntimeError('Exceeded Allocated Memory')
 
     cdef vector[double] thetaxs_,thetays_,freqs_
     cdef vector[complex] magarr
@@ -561,10 +562,13 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
         freq_mod = freq_N//10
 
     cdef size_t vsize 
-    
+
     reset() # reset counter and init lock                    
     with nogil, parallel():
         for freq_ii in prange(freq_N):
+            if check_mem():
+                break
+
             freq_val = freq_arr[freq_ii]
 
             GetMultiplaneFreqImage(theta_step, theta_N, theta_min, lens_scaling, freq_val, freq_power_1,\
@@ -572,14 +576,12 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
                                    beta_1_vec, freq_power_2, lens_arr_2, grad_lens_arr_2, hess_lens_arr_2,\
                                    geom_const_2, lens_const_2, beta_2_vec, freqpnts[freq_ii])  
             
-            vsize = sizeof(imagepoint) * freqpnts[freq_ii].capacity() + sizeof(freqpnts[freq_ii])  
+            vsize = sizeof(imagepoint) * freqpnts[freq_ii].capacity() + sizeof(freqpnts[freq_ii])
             report_withsize(freq_mod,freq_N,vsize,max_membytes)
-            if vsize > max_membytes:
-                break
     destroy() # release lock
-               
-    if vsize > max_membytes:
-        raise RuntimeError(f'Out of Memory Allocated: {vsize} / {max_membytes}')
+
+    if check_mem():
+        raise RuntimeError('Exceeded Allocated Memory')
 
     cdef vector[double] thetaxs_,thetays_,freqs_
     cdef vector[complex] magarr
@@ -678,6 +680,9 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
         
     with nogil, parallel():
         for freq_ii in prange(freq_N):
+            if check_mem():
+                break
+                
             freq_val = freq_arr[freq_ii]
 
             GetPlaneToPMGravFreqImage(theta_step,\
@@ -698,12 +703,10 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
 
             vsize = sizeof(imagepoint) * freqpnts[freq_ii].capacity() + sizeof(freqpnts[freq_ii])
             report_withsize(freq_mod,freq_N,vsize,max_membytes)
-            if vsize > max_membytes:
-                break
     destroy() # release lock
    
-    if vsize > max_membytes:
-        raise RuntimeError(f'Out of Memory Allocated: {vsize} / {max_membytes}')
+    if check_mem():
+        raise RuntimeError('Exceeded Allocated Memory')
 
     cdef vector[double] thetaxs_,thetays_,freqs_
     cdef vector[complex] magarr

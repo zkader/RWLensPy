@@ -72,7 +72,7 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
     double lens_param2 = lens_fac2 * pow(freq,freq_power2) / geom_fac2 ;
     
     double theta1_x, theta1_y, theta2_x, theta2_y;
-    double geomdelay1, lensdelay1, phase1, geomdelay2, lensdelay2, phase2;
+    double geomdelay1, lensdelay1, geomdelay2, lensdelay2, phase;
     std::complex<double> mag1, mag2;
     
     physpoint beta2;
@@ -86,25 +86,14 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
 							theta_step, theta_min,	
 							dlens_arr1, lens_param1, beta1 ))
             {
+                phase = 0;
+
 				theta1_x  = theta_step * jtheta + theta_min;				    			
-				theta1_y  = theta_step * itheta + theta_min;					
-					
-				geomdelay1 = geom_fac1*0.5*( pow( theta1_x - beta1.valx ,2.0)\
-                            + pow( theta1_y - beta1.valy ,2.0));
-
-                lensdelay1 = GetLensDelay(lens_fac1, freq,\
-                                        freq_ref, freq_power1,\
-                                        lens_arr1[jtheta + theta_N * itheta]);
-
-                // scipy rfft phase convention is exp(-i 2 pi f t)
-                phase1 = -2 * pi * freq * ( geomdelay1 + lensdelay1 );        
-
-				mag1 = GetMag(itheta, jtheta, theta_N, ddlens_arr1, lens_param1);				
+				theta1_y  = theta_step * itheta + theta_min;
                 
                 beta2.valx = multilens_12_scale*theta1_x + lens12_offset.valx;
                 beta2.valy = multilens_12_scale*theta1_y + lens12_offset.valy;
                 
-                phase2 = 0.0; 
                 for(int ktheta = 2; ktheta < theta_N - 2; ktheta++) 
                 {
                     for(int ltheta = 2; ltheta < theta_N - 2; ltheta++)
@@ -116,6 +105,17 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
                             theta2_x  = theta_step * ltheta + theta_min;				    			
                             theta2_y  = theta_step * ktheta + theta_min;					
 
+                            // plane 1 delays and mag
+                            geomdelay1 = geom_fac1*0.5*( pow( theta1_x - beta1.valx ,2.0)\
+                                        + pow( theta1_y - beta1.valy ,2.0));
+
+                            lensdelay1 = GetLensDelay(lens_fac1, freq,\
+                                                    freq_ref, freq_power1,\
+                                                    lens_arr1[jtheta + theta_N * itheta]);
+
+                            mag1 = GetMag(itheta, jtheta, theta_N, ddlens_arr1, lens_param1);
+
+                            // plane 2 delays and mag
                             geomdelay2 = geom_fac2*0.5*( pow( theta2_x - beta2.valx ,2.0)\
                                         + pow( theta2_y - beta2.valy ,2.0));
 
@@ -123,21 +123,19 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
                                             freq_ref, freq_power2,\
                                             lens_arr2[ktheta + theta_N * ltheta]);
 
-                            phase2 = -2 * pi * freq * ( geomdelay2 + lensdelay2 );
+                            mag2 = GetMag(ktheta, ltheta, theta_N, ddlens_arr2, lens_param2);
+
+                            // scipy rfft phase convention is exp(-i 2 pi f t)
+                            phase = -2 * pi * freq * ( geomdelay1 + lensdelay1\
+                                                     + geomdelay2 + lensdelay2 );        
 
                             // conj if evaluating in aliased nyq zone
-                            if(nyqzone_aliased)
-                            {
-                                phase1 = -phase1;
-                                phase2 = -phase2;
-                            }
-
-                            mag2 = GetMag(ktheta, ltheta, theta_N, ddlens_arr2, lens_param2);				
+                            if(nyqzone_aliased){phase = -phase;}
               
                             tempval = mag1*mag2*\
                                             std::complex<double>(
-                                            cos(phase1+phase2),
-                                            sin(phase1+phase2));      
+                                            cos(phase),
+                                            sin(phase));      
                         
                             tfunc_val += tempval;
                         }
@@ -744,10 +742,10 @@ void SetGradientArrs(
             physpoint magpnt;
 			
 			// first eigenvalue
-            magpnt.valx = fxx + fyy + pow( pow(fxx - fyy,2) - 4 * fxy* fxy ,0.5);
+            magpnt.valx = fxx + fyy + pow( pow(fxx - fyy,2) + 4 * fxy* fxy ,0.5);
 			
 			// second eigenvalue
-            magpnt.valy = fxx + fyy - pow( pow(fxx - fyy,2) - 4 * fxy* fxy ,0.5);
+            magpnt.valy = fxx + fyy - pow( pow(fxx - fyy,2) + 4 * fxy* fxy ,0.5);
 			
             ddlens_arr[arr_ind] = magpnt;                
         }
