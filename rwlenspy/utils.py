@@ -160,7 +160,7 @@ def RationalLens(
     ArrayLike
         The value of the lensing function.
     """
-    Lens_del = amp / (1 + 0.5*((rx) ** 2 + (ry) ** 2) / (scale**2))
+    Lens_del = amp / (1 + 0.5 * ((rx) ** 2 + (ry) ** 2) / (scale**2))
     return Lens_del
 
 
@@ -507,7 +507,7 @@ def AnalyticRationalLens(
                   -y / (4 * sigma ** 4),
                   1 / (sigma ** 2),
                   -y / (sigma ** 2),
-                  1 - kappa/sigma ** 2,
+                  1 - kappa / sigma ** 2,
                   -y]
 
         images = np.roots(coeffs)
@@ -521,18 +521,18 @@ def AnalyticRationalLens(
 
     # lens delay func
     def _lensdel(x, y, geom_const, lens_const, sigma):
-        return (geom_const * 0.5 * (x - y) ** 2 +
-                lens_const * 1 / (1 + 0.5 * x ** 2 / sigma ** 2))
+        return (geom_const * 0.5 * (x - y) ** 2
+                + lens_const * 1 / (1 + 0.5 * x ** 2 / sigma ** 2))
 
     # lens mag func
     def _lensmag(x, kappa, sigma):
-        x_a = x*x / sigma**2
+        x_a = x * x / sigma**2
         pre_fac = (1 + 0.5 * x_a)
 
-        eig1 = 1 + kappa / pre_fac**3 * (3/2 * x*x - 1) + 0j
+        eig1 = 1 + kappa / pre_fac**3 * (3 / 2 * x * x - 1) + 0j
         eig2 = 1 - kappa / pre_fac**2 + 0j
 
-        return 1/np.sqrt(eig1 * eig2)
+        return 1 / np.sqrt(eig1 * eig2)
 
     imgfreqs = []
     imgdels = []
