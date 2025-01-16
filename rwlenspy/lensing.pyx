@@ -27,7 +27,8 @@ cpdef vector[complex] RunUnitlessTransferFunc(
                                        double geom_const,
                                        double lens_const,
                                        double freq_power,
-                                       bint nyqzone_aliased
+                                       bint nyqzone_aliased,
+                                       bint verbose = True
                                        ):
     """Get the propagation transfer function for a single lens.
 
@@ -88,11 +89,12 @@ cpdef vector[complex] RunUnitlessTransferFunc(
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
 
-            tfunc[freq_ii] = GetTransferFuncVal( theta_step, theta_N, theta_min,\
+            tfunc[freq_ii] = GetTransferFuncVal( theta_step, theta_N, theta_min,
                                                 freq_val, freq_ref, freq_power, lens_arr, grad_lens_arr,\
                                                hess_lens_arr, geom_const, lens_const, \
                                                beta_vec, nyqzone_aliased)
-            report(freq_mod,freq_N)
+            if verbose == True:
+                report(freq_mod,freq_N)
     destroy() # release lock
     
     return tfunc
@@ -112,9 +114,10 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
                                        double freq_power,
                                        double eins,
                                        double beta_E_x,
-                                       double beta_E_y,                                                    
+                                       double beta_E_y,        
                                        double mass,
-                                       bint nyqzone_aliased
+                                       bint nyqzone_aliased,
+                                       bint verbose = True
                                        ):
     """Get the propagation transfer function through two lenses (any + grav).
 
@@ -190,7 +193,8 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
                                                       freq_ref, freq_power, lens_arr, grad_lens_arr,\
                                                       hess_lens_arr, geom_const, lens_const, mass,\
                                                       beta_E_vec, beta_vec, lens_scaling, nyqzone_aliased)
-            report(freq_mod,freq_N)
+            if verbose == True:
+                report(freq_mod,freq_N)
     destroy() # release lock            
     return tfunc
 
@@ -214,7 +218,8 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
                                        double geom_const_2,
                                        double lens_const_2,
                                        double freq_power_2,
-                                       bint nyqzone_aliased
+                                       bint nyqzone_aliased,
+                                       bint verbose = True
 ):
     """Get the propagation transfer function through two lenses (any + any).
 
@@ -301,8 +306,8 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
                                 hess_lens_arr_1, geom_const_1, lens_const_1, freq_power_2,\
                                 lens_arr_2, grad_lens_arr_2, hess_lens_arr_2, geom_const_2,\
                                 lens_const_2, lens_scaling, beta_1_vec, beta_2_vec, nyqzone_aliased) 
-            
-            report(freq_mod,freq_N)
+            if verbose == True:
+                report(freq_mod,freq_N)
     destroy() # release lock            
     return tfunc
 
@@ -311,7 +316,8 @@ cpdef vector[complex] RunGravTransferFunc(
                                        double beta_x,
                                        double beta_y,    
                                        double mass,
-                                       bint nyqzone_aliased                                       
+                                       bint nyqzone_aliased,
+                                       bint verbose  = True
 ):
     """Get the propagation transfer function through a gravitational lens.
 
@@ -359,8 +365,8 @@ cpdef vector[complex] RunGravTransferFunc(
             freq_val = freq_arr[freq_ii]
             
             tfunc[freq_ii] = GetPMGravTransferFuncVal( freq_val, mass, beta_vec, nyqzone_aliased)
-
-            report(freq_mod,freq_N)
+            if verbose == True:
+                report(freq_mod,freq_N)
     destroy() # release lock
             
     return tfunc
@@ -374,14 +380,15 @@ cpdef vector[complex] RunGravTransferFunc(
 cpdef GetUnitlessFreqStationaryPoints( double theta_min,
                                        double theta_max,
                                        int theta_N,
-                                       vector[double] lens_arr,                                       
+                                       vector[double] lens_arr,
                                        vector[double] freq_arr,
                                        double beta_x,
                                        double beta_y,
                                        double geom_const,
                                        double lens_const,
                                        double freq_power,
-                                       size_t max_membytes
+                                       size_t max_membytes,
+                                       bint verbose = True
                                        ):
     """Get all observables after propagation through a lens.
 
@@ -449,7 +456,8 @@ cpdef GetUnitlessFreqStationaryPoints( double theta_min,
                          hess_lens_arr,	geom_const, lens_const, beta_vec, freqpnts[freq_ii])
 
             vsize = sizeof(imagepoint) * freqpnts[freq_ii].capacity() + sizeof(freqpnts[freq_ii])
-            report_withsize(freq_mod,freq_N,vsize,max_membytes)            
+            if verbose == True:
+                report_withsize(freq_mod,freq_N,vsize,max_membytes)            
     destroy() # release lock
 
     if check_mem():
@@ -482,7 +490,8 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
                                        double geom_const_2,
                                        double lens_const_2,
                                        double freq_power_2,
-                                       size_t max_membytes
+                                       size_t max_membytes,
+                                       bint verbose = True
                                      ):
     """Get all observables after two lens propagation (any + any).
 
@@ -577,7 +586,8 @@ cpdef GetMultiplaneFreqStationaryPoints( double theta_min,
                                    geom_const_2, lens_const_2, beta_2_vec, freqpnts[freq_ii])  
             
             vsize = sizeof(imagepoint) * freqpnts[freq_ii].capacity() + sizeof(freqpnts[freq_ii])
-            report_withsize(freq_mod,freq_N,vsize,max_membytes)
+            if verbose == True:
+                report_withsize(freq_mod,freq_N,vsize,max_membytes)
     destroy() # release lock
 
     if check_mem():
@@ -608,7 +618,8 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
                                        double lens_scale_2,
                                        double beta_2_x,
                                        double beta_2_y,
-                                       size_t max_membytes
+                                       size_t max_membytes,
+                                       bint verbose = True
                                      ):
     """Get all observables after two lens propagation (any + grav).
 
@@ -702,7 +713,8 @@ cpdef GetPlaneToPMGravFreqStationaryPoints( double theta_min,
                                       freqpnts[freq_ii])
 
             vsize = sizeof(imagepoint) * freqpnts[freq_ii].capacity() + sizeof(freqpnts[freq_ii])
-            report_withsize(freq_mod,freq_N,vsize,max_membytes)
+            if verbose == True:
+                report_withsize(freq_mod,freq_N,vsize,max_membytes)
     destroy() # release lock
    
     if check_mem():
