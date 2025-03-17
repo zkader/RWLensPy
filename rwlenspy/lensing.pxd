@@ -85,19 +85,19 @@ cdef extern from "rwlens.h":
     double complex GetTransferFuncVal(\
     double theta_step, int theta_N, \
     double theta_min, double freq, \
-    double freq_ref, double freq_power,\
+    double freq_power,\
     vector[double]& lens_arr, \
     vector[physpoint]& dlens_arr, \
     vector[physpoint]& ddlens_arr, \
     double geom_fac, double lens_fac, \
-    physpoint betav, bint nyqzone_aliased) nogil
+    physpoint betav, imagepoint imageref, \
+    bint nyqzone_aliased) nogil
 
     double complex GetTwoPlaneTransferFuncVal(
 	double theta_step,
 	int theta_N, 
 	double theta_min,		
 	double freq,
-	double freq_ref,    
 	double freq_power1,        
 	vector[double]& lens_arr1,
 	vector[physpoint]& dlens_arr1,
@@ -113,6 +113,7 @@ cdef extern from "rwlens.h":
     double multilens_12_scale,        
 	physpoint beta1,
 	physpoint lens12_offset,
+    imagepoint imageref,
     bint nyqzone_aliased) nogil
 
     double complex GetPlanePMGravTransferFuncVal(
@@ -120,7 +121,6 @@ cdef extern from "rwlens.h":
 	int theta_N, 
 	double theta_min,		
 	double freq,
-	double freq_ref,    
 	double freq_power,        
 	vector[double]& lens_arr,
 	vector[physpoint]& dlens_arr,
@@ -131,6 +131,7 @@ cdef extern from "rwlens.h":
 	physpoint betaE_v,
 	physpoint betav,
     double multilens_scale,
+    imagepoint imageref,
     bint nyqzone_aliased) nogil
     
     double complex GetPMGravTransferFuncVal(
@@ -138,19 +139,7 @@ cdef extern from "rwlens.h":
     double mass,
     physpoint betav,
     bint nyqzone_aliased) nogil
-    
-    double complex GetGravTransferFuncVal(
-	double theta_step,
-	int theta_N, 
-	double theta_min,
-	double freq,
-	vector[double]& fermat_pot,
-        double geom_factor,
-	double eins,
-	double mass,
-        double beta_x,
-        double beta_y) nogil
-    
+
     void GetFreqImage( double theta_step, int theta_N, double theta_min,\
                        double freq,  double freq_power,\
                        vector[double]& lens_arr, vector[physpoint]& dlens_arr,\
@@ -205,11 +194,12 @@ cdef extern from "rwlens.h":
                       vector[physpoint]& dlens_arr, double lens_param,\
                       physpoint betav ) nogil
     
-    double complex GetImgVal( int itheta, int jtheta, double theta_step, int theta_N,\
-                             double theta_min, double freq, double freq_ref,\
-                             double freq_power, vector[double]& lens_arr, \
-                             vector[physpoint]& ddlens_arr, double geom_fac,\
-                             double lens_fac, physpoint betav ) nogil
+    double complex GetImgVal( int itheta, int jtheta, double theta_step,\
+        int theta_N,double theta_min, double freq,\
+        double freq_power, vector[double]& lens_arr, \
+        vector[physpoint]& ddlens_arr, double geom_fac,\
+        double lens_fac, physpoint betav, imagepoint imageref,\
+        bint nyqzone_aliased ) nogil
 
     void SetGeometricDelayArr(double theta_min, double theta_max, int theta_N, \
                              double beta_x, double beta_y, vector[double]& geom_arr) nogil
@@ -222,3 +212,5 @@ cdef extern from "rwlens.h":
     void SetGradientArrs( int theta_N, double theta_step,    \
                         vector[double]& lens_arr, vector[physpoint]& dlens_arr, \
                         vector[physpoint]& ddlens_arr)
+
+    imagepoint GetMaxMagImage(vector[imagepoint]& freq_images)

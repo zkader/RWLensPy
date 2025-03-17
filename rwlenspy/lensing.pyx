@@ -20,7 +20,7 @@ cpdef vector[complex] RunUnitlessTransferFunc(
                                        double theta_max,
                                        int theta_N,
                                        vector[double] freq_arr,
-                                       double freq_ref,    
+                                       double freq_ref,
                                        vector[double] lens_arr,    
                                        double beta_x,
                                        double beta_y,
@@ -64,7 +64,9 @@ cpdef vector[complex] RunUnitlessTransferFunc(
     cdef vector[complex] tfunc = vector[complex](freq_N)
     cdef vector[physpoint] grad_lens_arr = vector[physpoint](theta_N*theta_N)
     cdef vector[physpoint] hess_lens_arr = vector[physpoint](theta_N*theta_N)
-	
+    cdef vector[imagepoint] freq_ref_imgs
+    cdef imagepoint freq_ref_max_img
+
     cdef physpoint beta_vec
     
     beta_vec.valx = beta_x
@@ -83,16 +85,22 @@ cpdef vector[complex] RunUnitlessTransferFunc(
     else:
         freq_mod = freq_N//10
 
+    GetFreqImage(theta_step, theta_N, theta_min, freq_ref, freq_power,\
+                 lens_arr, grad_lens_arr, hess_lens_arr, geom_const,\
+                 lens_const, beta_vec, freq_ref_imgs)
 
-    reset() # reset counter and init lock        
+    freq_ref_max_img = GetMaxMagImage(freq_ref_imgs)
+
+    reset() # reset counter and init lock
     with nogil, parallel():
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
 
             tfunc[freq_ii] = GetTransferFuncVal( theta_step, theta_N, theta_min,
-                                                freq_val, freq_ref, freq_power, lens_arr, grad_lens_arr,\
+                                                freq_val,\
+                                                freq_power, lens_arr, grad_lens_arr,\
                                                hess_lens_arr, geom_const, lens_const, \
-                                               beta_vec, nyqzone_aliased)
+                                               beta_vec, freq_ref_max_img, nyqzone_aliased)
             if verbose == True:
                 report(freq_mod,freq_N)
     destroy() # release lock
@@ -160,6 +168,8 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
     cdef vector[complex] tfunc = vector[complex](freq_N)
     cdef vector[physpoint] grad_lens_arr = vector[physpoint](theta_N*theta_N)
     cdef vector[physpoint] hess_lens_arr = vector[physpoint](theta_N*theta_N)
+    cdef vector[imagepoint] freq_ref_imgs
+    cdef imagepoint freq_ref_max_img
 	
     cdef physpoint beta_vec, beta_E_vec
     
@@ -183,16 +193,35 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
         freq_mod = freq_N
     else:
         freq_mod = freq_N//10
-    
+
+    GetPlaneToPMGravFreqImage(theta_step,\
+                                theta_N,\
+                                theta_min,\
+                                lens_scaling,\
+                                freq_ref,\
+                                freq_power,\
+                                lens_arr,\
+                                grad_lens_arr,\
+                                hess_lens_arr,\
+                                geom_const,\
+                                lens_const,\
+                                beta_vec,\
+                                mass,\
+                                beta_E_vec,\
+                                freq_ref_imgs)
+
+    freq_ref_max_img = GetMaxMagImage(freq_ref_imgs)
+
     reset() # reset counter and init lock            
     with nogil, parallel():
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
             
             tfunc[freq_ii] = GetPlanePMGravTransferFuncVal( theta_step, theta_N, theta_min, freq_val,\
-                                                      freq_ref, freq_power, lens_arr, grad_lens_arr,\
-                                                      hess_lens_arr, geom_const, lens_const, mass,\
-                                                      beta_E_vec, beta_vec, lens_scaling, nyqzone_aliased)
+            freq_power, lens_arr, grad_lens_arr,\
+            hess_lens_arr, geom_const, lens_const, mass,\
+            beta_E_vec, beta_vec, lens_scaling,\
+            freq_ref_max_img,nyqzone_aliased)
             if verbose == True:
                 report(freq_mod,freq_N)
     destroy() # release lock            
@@ -270,6 +299,8 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
     cdef vector[physpoint] hess_lens_arr_1 = vector[physpoint](theta_N*theta_N)
     cdef vector[physpoint] grad_lens_arr_2 = vector[physpoint](theta_N*theta_N)
     cdef vector[physpoint] hess_lens_arr_2 = vector[physpoint](theta_N*theta_N)
+    cdef vector[imagepoint] freq_ref_imgs
+    cdef imagepoint freq_ref_max_img
 	
     cdef physpoint beta_1_vec, beta_2_vec
     
@@ -295,17 +326,29 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
     else:
         freq_mod = freq_N//10
 
+    GetMultiplaneFreqImage(theta_step, theta_N, theta_min, lens_scaling,\
+                            freq_ref, freq_power_1, lens_arr_1,\
+                            grad_lens_arr_1, hess_lens_arr_1, geom_const_1,\
+                            lens_const_1,beta_1_vec, freq_power_2,\
+                            lens_arr_2, grad_lens_arr_2, hess_lens_arr_2,\
+                            geom_const_2, lens_const_2, beta_2_vec,\
+                            freq_ref_imgs)  
+
+    freq_ref_max_img = GetMaxMagImage(freq_ref_imgs)
     
     reset() # reset counter and init lock            
     with nogil, parallel():
         for freq_ii in prange(freq_N):
             freq_val = freq_arr[freq_ii]
             
-            tfunc[freq_ii] = GetTwoPlaneTransferFuncVal( theta_step, theta_N, theta_min,\
-                                freq_val, freq_ref, freq_power_1, lens_arr_1, grad_lens_arr_1,\
-                                hess_lens_arr_1, geom_const_1, lens_const_1, freq_power_2,\
-                                lens_arr_2, grad_lens_arr_2, hess_lens_arr_2, geom_const_2,\
-                                lens_const_2, lens_scaling, beta_1_vec, beta_2_vec, nyqzone_aliased) 
+            tfunc[freq_ii] = GetTwoPlaneTransferFuncVal( theta_step, theta_N,\
+                                theta_min, freq_val, freq_power_1,\
+                                lens_arr_1, grad_lens_arr_1, hess_lens_arr_1,\
+                                geom_const_1, lens_const_1, freq_power_2,\
+                                lens_arr_2, grad_lens_arr_2, hess_lens_arr_2,\
+                                geom_const_2, lens_const_2, lens_scaling,\
+                                beta_1_vec, beta_2_vec, freq_ref_max_img,\
+                                nyqzone_aliased) 
             if verbose == True:
                 report(freq_mod,freq_N)
     destroy() # release lock            
