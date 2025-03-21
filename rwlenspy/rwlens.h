@@ -32,7 +32,6 @@ std::complex<double> GetTransferFuncVal(
 	const int theta_N, 
 	const double theta_min,		
 	const double freq,
-	const double freq_ref,    
 	const double freq_power,       
 	const std::vector<double> &lens_arr,
 	const std::vector<physpoint> &dlens_arr,
@@ -40,15 +39,15 @@ std::complex<double> GetTransferFuncVal(
     const double geom_fac,    
     const double lens_fac,
 	const physpoint betav,
-    const bool nyqzone_aliased    
+	const imagepoint imageref,
+    const bool nyqzone_aliased
 );
 
 std::complex<double> GetTwoPlaneTransferFuncVal(
 	const double theta_step,
 	const int theta_N, 
 	const double theta_min,		
-	const double freq,
-	const double freq_ref,    
+	const double freq,    
 	const double freq_power1,        
 	const std::vector<double> &lens_arr1,
 	const std::vector<physpoint> &dlens_arr1,
@@ -64,6 +63,7 @@ std::complex<double> GetTwoPlaneTransferFuncVal(
     const double multilens_12_scale,        
 	const physpoint beta1,
 	const physpoint lens12_offset,
+	const imagepoint imageref,
     const bool nyqzone_aliased    
 );
 
@@ -72,7 +72,6 @@ std::complex<double> GetPlanePMGravTransferFuncVal(
 	const int theta_N, 
 	const double theta_min,		
 	const double freq,
-	const double freq_ref,    
 	const double freq_power,        
 	const std::vector<double> &lens_arr,
 	const std::vector<physpoint> &dlens_arr,
@@ -83,7 +82,8 @@ std::complex<double> GetPlanePMGravTransferFuncVal(
 	const physpoint betaE_v,
 	const physpoint betav,
     const double multilens_scale,
-    const bool nyqzone_aliased    
+	const imagepoint imageref,
+    const bool nyqzone_aliased
 );
 
 std::complex<double> GetPMGravTransferFuncVal(
@@ -171,9 +171,17 @@ std::complex<double> GetMag(
 double GetLensDelay(
     const double lens_fac,
     const double freq,
-    const double freq_ref,
     const double freq_power,
     const double lens_arr_val
+);
+
+double GetPhase(
+    const double geom_delay,
+    const double lens_delay,    	
+    const double freq,
+    const double freq_power,
+	const imagepoint imageref,
+    const bool nyqzone_aliased
 );
 
 std::complex<double> GetImgVal(
@@ -183,14 +191,14 @@ std::complex<double> GetImgVal(
 	const int theta_N, 
 	const double theta_min,		
 	const double freq,
-	const double freq_ref,    
 	const double freq_power,        
 	const std::vector<double> &lens_arr,
 	const std::vector<physpoint> &ddlens_arr,
     const double geom_fac,    
     const double lens_fac,
 	const physpoint betav,
-    const bool nyqzone_aliased    
+	const imagepoint imageref,
+    const bool nyqzone_aliased
 );
 
 void SetGeometricDelayArr(
@@ -218,6 +226,10 @@ void SetGradientArrs(
 	const std::vector<double> &lens_arr,
 	std::vector<physpoint> &dlens_arr ,
 	std::vector<physpoint> &ddlens_arr 	
+);
+
+imagepoint GetMaxMagImage(
+    const std::vector<imagepoint> &freq_images
 );
 
 int Sign(const double val);
