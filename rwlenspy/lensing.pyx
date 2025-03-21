@@ -27,7 +27,6 @@ cpdef vector[complex] RunUnitlessTransferFunc(
                                        double geom_const,
                                        double lens_const,
                                        double freq_power,
-                                       double phase_freq_ref,
                                        bint nyqzone_aliased,
                                        bint verbose = True
                                        ):
@@ -126,7 +125,6 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
                                        double beta_E_x,
                                        double beta_E_y,        
                                        double mass,
-                                       double phase_freq_ref,
                                        bint nyqzone_aliased,
                                        bint verbose = True
                                        ):
@@ -250,7 +248,6 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
                                        double geom_const_2,
                                        double lens_const_2,
                                        double freq_power_2,
-                                       double phase_freq_ref,
                                        bint nyqzone_aliased,
                                        bint verbose = True
 ):

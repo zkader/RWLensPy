@@ -266,7 +266,6 @@ def test_transferfunc():
         geom_const,
         lens_const,
         freq_power,
-        freq_ref,        
         nyqzone,
     )
     tv = time() - t1
@@ -355,7 +354,6 @@ def test_dedisperion():
 
     # Lens Parameters
     freq_ref = 0
-    freq_phase_ref = 1e128
     bb_frames = 5
     freqs = 800e6 - rfftfreq(2048 * bb_frames, d=1 / (800e6))  # MHz
     freqs = freqs.astype(np.double).ravel(order="C")
@@ -384,7 +382,6 @@ def test_dedisperion():
         geom_const,
         lens_const,
         freq_power,
-        freq_phase_ref,        
         nyqalias,
     )
     tv = time() - t1
@@ -425,7 +422,6 @@ def test_phasegeneration():
     Eins_time_const = 4 * c.G * c.M_sun / c.c**3
     const_D = D_len_src / (D_obs_len * D_obs_src)
     freq_ref = 800e6
-    phase_freq_ref = 0
     mass = 1e0  # solar mass
     theta_E = np.sqrt(mass * Eins_time_const * c.c * const_D).to(u.m / u.m)
     windowsamples = 2048
@@ -475,7 +471,6 @@ def test_phasegeneration():
         geom_const,
         lens_const,
         freq_power,
-        phase_freq_ref,
         nyqalias,
         verbose=verbose
     )
@@ -654,7 +649,6 @@ def test_morphologygeneration():
         lens_const,
         freq_power,
         nyqalias,
-        freq_ref,
         verbose=verbose
     )
     tv = time() - t1
