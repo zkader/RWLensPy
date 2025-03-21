@@ -90,7 +90,7 @@ cdef extern from "rwlens.h":
     vector[physpoint]& dlens_arr, \
     vector[physpoint]& ddlens_arr, \
     double geom_fac, double lens_fac, \
-    physpoint betav, imagepoint imageref, \
+    physpoint betav, imagepoint imageref,\
     bint nyqzone_aliased) nogil
 
     double complex GetTwoPlaneTransferFuncVal(
@@ -197,8 +197,9 @@ cdef extern from "rwlens.h":
     double complex GetImgVal( int itheta, int jtheta, double theta_step,\
         int theta_N,double theta_min, double freq,\
         double freq_power, vector[double]& lens_arr, \
-        vector[physpoint]& ddlens_arr, double geom_fac,\
-        double lens_fac, physpoint betav, imagepoint imageref,\
+        vector[physpoint]& ddlens_arr,\
+        double geom_fac, double lens_fac, physpoint betav,\
+        imagepoint imageref,\
         bint nyqzone_aliased ) nogil
 
     void SetGeometricDelayArr(double theta_min, double theta_max, int theta_N, \

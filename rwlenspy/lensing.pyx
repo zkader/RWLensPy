@@ -27,6 +27,7 @@ cpdef vector[complex] RunUnitlessTransferFunc(
                                        double geom_const,
                                        double lens_const,
                                        double freq_power,
+                                       double phase_freq_ref,
                                        bint nyqzone_aliased,
                                        bint verbose = True
                                        ):
@@ -100,7 +101,8 @@ cpdef vector[complex] RunUnitlessTransferFunc(
                                                 freq_val,\
                                                 freq_power, lens_arr, grad_lens_arr,\
                                                hess_lens_arr, geom_const, lens_const, \
-                                               beta_vec, freq_ref_max_img, nyqzone_aliased)
+                                               beta_vec, freq_ref_max_img,\
+                                               nyqzone_aliased)
             if verbose == True:
                 report(freq_mod,freq_N)
     destroy() # release lock
@@ -124,6 +126,7 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
                                        double beta_E_x,
                                        double beta_E_y,        
                                        double mass,
+                                       double phase_freq_ref,
                                        bint nyqzone_aliased,
                                        bint verbose = True
                                        ):
@@ -221,7 +224,7 @@ cpdef vector[complex] RunPlasmaGravTransferFunc(
             freq_power, lens_arr, grad_lens_arr,\
             hess_lens_arr, geom_const, lens_const, mass,\
             beta_E_vec, beta_vec, lens_scaling,\
-            freq_ref_max_img,nyqzone_aliased)
+            freq_ref_max_img, nyqzone_aliased)
             if verbose == True:
                 report(freq_mod,freq_N)
     destroy() # release lock            
@@ -247,6 +250,7 @@ cpdef vector[complex] RunMultiplaneTransferFunc(
                                        double geom_const_2,
                                        double lens_const_2,
                                        double freq_power_2,
+                                       double phase_freq_ref,
                                        bint nyqzone_aliased,
                                        bint verbose = True
 ):

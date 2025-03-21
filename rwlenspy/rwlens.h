@@ -40,7 +40,7 @@ std::complex<double> GetTransferFuncVal(
     const double lens_fac,
 	const physpoint betav,
 	const imagepoint imageref,
-    const bool nyqzone_aliased    
+    const bool nyqzone_aliased
 );
 
 std::complex<double> GetTwoPlaneTransferFuncVal(
@@ -83,7 +83,7 @@ std::complex<double> GetPlanePMGravTransferFuncVal(
 	const physpoint betav,
     const double multilens_scale,
 	const imagepoint imageref,
-    const bool nyqzone_aliased    
+    const bool nyqzone_aliased
 );
 
 std::complex<double> GetPMGravTransferFuncVal(
@@ -198,7 +198,7 @@ std::complex<double> GetImgVal(
     const double lens_fac,
 	const physpoint betav,
 	const imagepoint imageref,
-    const bool nyqzone_aliased    
+    const bool nyqzone_aliased
 );
 
 void SetGeometricDelayArr(
