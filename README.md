@@ -6,6 +6,8 @@ The code can be installed with:
 
 `pip install rwlenspy`
 
+https://doi.org/10.1103/PhysRevD.110.123027
+
 ## Examples
 
 For examples see `examples/`. The image ray trace is shown in the `example_animate_*.py` files and how to get the coherent transfer function for a baseband simulation is shown in `example_transfer*.py`.
@@ -23,3 +25,7 @@ The package is built with Poetry and Cython using C++11 and OpenMP. This require
 Once installed, tests can be run with:
 
 `poetry run pytest`
+
+## Citation
+
+If you are using this package, please cite [(Kader et al., 2024)](https://doi.org/10.1103/PhysRevD.110.123027).
